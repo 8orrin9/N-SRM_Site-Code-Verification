@@ -1,0 +1,67 @@
+# Python 가상환경 (uv)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# 환경 변수
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 로그
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# 임시 파일
+*.tmp
+.cache/
+temp/
+
+# 보관 파일
+.bin/
+
+# SQLite DB
+*.db
+*.db-shm
+*.db-wal
+
+# log
+*.log
+
+# Claude
+.claude/
+CLAUDE_local.md
+**/CLAUDE_local.md
+
+# Backup
+backup/
+
+# npm lockfile (내부 환경 호환성)
+shared/frontend/package-lock.json
