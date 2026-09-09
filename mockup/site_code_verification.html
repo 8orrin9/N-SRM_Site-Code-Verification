@@ -8,10 +8,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --blue: #1428A0;          /* Samsung Blue */
+    --blue: #0e1650;          /* Samsung Blue #1428A0*/ 
     --blue-dark: #0d1c73;
     --blue-soft: #eef1fb;
     --blue-line: #c7d0f0;
+    --std-accent: #0e1650;    /* 표준화 강조(짙은 삼성 블루) */
+    --std-tint: #f0f2fa;      /* 표준화 연한 배경 */
     --text: #222;
     --text-sub: #666;
     --line: #e0e0e0;
@@ -243,7 +245,7 @@
   .modal-overlay.show { display: flex; }
   .modal {
     background: #fff; border-radius: 8px; margin-top: 7vh; width: 600px; max-width: 92vw;
-    box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; position: relative;
   }
   .modal-head {
     display: flex; align-items: center; justify-content: space-between;
@@ -305,6 +307,7 @@
   /* 글로벌 기업정보 검색 팝업 */
   .corp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .corp-inputs { display: flex; flex-direction: column; gap: 10px; }
+  .corp-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .corp-inputs .field label { font-size: 12px; color: var(--text-sub); font-weight: 600; }
   .corp-inputs .field input, .corp-inputs .field select {
     height: 32px; border: 1px solid #ccc; border-radius: 4px;
@@ -346,6 +349,36 @@
   .addr-suggest div:last-child { border-bottom: none; }
   .addr-suggest div:hover { background: #f4f8ff; }
   .leaflet-container { font: inherit; }
+
+  /* 표준화(STD) 컬럼 */
+  table.grid thead th.std-col { background: var(--std-tint); color: var(--std-accent); }
+  table.grid tbody td.std-cell { background: #f9fafc; }
+  table.grid tbody td.std-cell.just-filled { animation: stdflash 1s ease; }
+  @keyframes stdflash { from { background: #e4e8f5; } to { background: #f9fafc; } }
+
+  /* 표준화 팝업 */
+  .std-body { padding: 4px 2px; }
+  .std-note { font-size: 13px; line-height: 1.6; color: var(--text); background: #fafafa;
+    border: 1px solid #ededed; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; }
+  .std-note b { color: var(--std-accent); }
+  .std-targets { display: flex; gap: 10px; }
+  .ms-btn { flex: 1; height: 40px; border: none; border-radius: 6px; background: #fff;
+    font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); transition: box-shadow .15s, transform .15s; }
+  .ms-btn.active { background: var(--std-tint); color: var(--std-accent);
+    box-shadow: 0 1px 4px rgba(16, 29, 120, 0.18); transform: translateY(-1px); }
+
+  /* 로딩 오버레이 (팝업/자동 표준화 공용) */
+  .load-overlay { display: none; position: absolute; inset: 0; z-index: 5;
+    background: rgba(255,255,255,.75); align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .load-overlay.show { display: flex; }
+  .spinner { width: 34px; height: 34px; border: 3px solid #d3ddf5; border-top-color: var(--std-accent);
+    border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-overlay .load-msg { font-size: 12.5px; color: var(--text-sub); }
+  .field-std input.block { background: var(--std-tint); color: var(--std-accent); border-color: #dbdfef; }
+  /* 글로벌 기업정보 검색 팝업의 표준화 입력란 — 수기 등록 팝업과 동일 톤 */
+  .corp-inputs .field-std input.block, .corp-right .field-std input.block { background: #eceef1; color: var(--text-sub); border-color: #ccc; }
 </style>
 </head>
 <body>
@@ -417,6 +450,7 @@
         <button data-tab="history">검증 이력</button>
       </div>
       <div class="actions" id="actions-verify">
+        <button class="btn" data-act="표준화">표준화</button>
         <button class="btn ghost" data-act="유사도 설정">유사도 설정</button>
         <button class="btn" data-act="신규 Code 적용">신규 Code 적용</button>
         <button class="btn" data-act="기존 Site Code로 Mapping">기존 Site Code로 Mapping</button>
@@ -424,6 +458,7 @@
         <button class="btn primary" data-act="저장">저장</button>
       </div>
       <div class="actions" id="actions-history" style="display:none">
+        <button class="btn" data-act="표준화">표준화</button>
         <button class="btn ghost" data-act="유사도 설정">유사도 설정</button>
         <button class="btn" data-act="확정취소">확정취소</button>
       </div>
@@ -437,20 +472,24 @@
             <th rowspan="2"><input type="checkbox" class="chk" id="chk-all" title="전체선택"></th>
             <th rowspan="2">부문</th>
             <th rowspan="2" class="sortable" data-key="status" data-type="str">Status</th>
-            <th class="g-sub" colspan="10">하위 공급망 정보</th>
+            <th class="g-sub" colspan="14">하위 공급망 정보</th>
             <th class="g-rec" colspan="14">유사 추천 Site 정보</th>
             <th rowspan="2" class="sortable" data-key="modified" data-type="str">최종 수정일</th>
             <th rowspan="2">상세보기</th>
           </tr>
           <tr class="col">
             <th class="c-sub sortable" data-key="sub.companyEn" data-type="str">업체명(Eng)</th>
+            <th class="c-sub sortable std-col" data-key="sub.companyStd" data-type="str">업체명(STD)</th>
             <th class="c-sub sortable" data-key="sub.corpId" data-type="str">기업식별코드</th>
             <th class="c-sub sortable" data-key="sub.duns" data-type="str">Duns No.</th>
             <th class="c-sub sortable" data-key="sub.country" data-type="str">국가/지역</th>
             <th class="c-sub sortable" data-key="sub.admin" data-type="str">행정구역</th>
             <th class="c-sub sortable" data-key="sub.addr" data-type="str">주소</th>
+            <th class="c-sub sortable std-col" data-key="sub.addrStd" data-type="str">주소(STD)</th>
             <th class="c-sub sortable" data-key="sub.lat" data-type="num">위도</th>
+            <th class="c-sub sortable std-col" data-key="sub.latStd" data-type="num">위도(STD)</th>
             <th class="c-sub sortable" data-key="sub.lon" data-type="num">경도</th>
+            <th class="c-sub sortable std-col" data-key="sub.lonStd" data-type="num">경도(STD)</th>
             <th class="c-sub sortable" data-key="sub.partner" data-type="str">관련 협력사 코드</th>
             <th class="c-sub sortable" data-key="sub.source" data-type="str">Site 출처</th>
 
@@ -482,19 +521,23 @@
             <th rowspan="2"><input type="checkbox" class="chk" id="chk-all-h" title="전체선택"></th>
             <th rowspan="2">부문</th>
             <th rowspan="2" class="sortable" data-key="status" data-type="str">Status</th>
-            <th class="g-sub" colspan="11">하위 공급망 정보</th>
+            <th class="g-sub" colspan="15">하위 공급망 정보</th>
             <th rowspan="2" class="sortable" data-key="modified" data-type="str">최종 수정일</th>
           </tr>
           <tr class="col">
             <th class="c-sub sortable" data-key="sub.siteCode" data-type="str">Site Code</th>
             <th class="c-sub sortable" data-key="sub.companyEn" data-type="str">업체명(Eng)</th>
+            <th class="c-sub sortable std-col" data-key="sub.companyStd" data-type="str">업체명(STD)</th>
             <th class="c-sub sortable" data-key="sub.corpId" data-type="str">기업식별 코드</th>
             <th class="c-sub sortable" data-key="sub.duns" data-type="str">Duns No.</th>
             <th class="c-sub sortable" data-key="sub.country" data-type="str">국가/지역</th>
             <th class="c-sub sortable" data-key="sub.admin" data-type="str">행정구역</th>
             <th class="c-sub sortable" data-key="sub.addr" data-type="str">주소</th>
+            <th class="c-sub sortable std-col" data-key="sub.addrStd" data-type="str">주소(STD)</th>
             <th class="c-sub sortable" data-key="sub.lat" data-type="num">위도</th>
+            <th class="c-sub sortable std-col" data-key="sub.latStd" data-type="num">위도(STD)</th>
             <th class="c-sub sortable" data-key="sub.lon" data-type="num">경도</th>
+            <th class="c-sub sortable std-col" data-key="sub.lonStd" data-type="num">경도(STD)</th>
             <th class="c-sub sortable" data-key="sub.partner" data-type="str">관련 협력사 코드</th>
             <th class="c-sub sortable" data-key="sub.source" data-type="str">Site 출처</th>
           </tr>
@@ -589,6 +632,7 @@
     <!-- Action bar -->
     <div class="reg-actionbar">
       <div class="actions">
+        <button class="btn" data-ract="표준화">표준화</button>
         <button class="btn" data-ract="추가">추가</button>
         <button class="btn" data-ract="삭제">삭제</button>
         <button class="btn primary" data-ract="저장">저장</button>
@@ -605,6 +649,7 @@
             <th rowspan="2" class="sortable" data-key="siteCode" data-type="str">Site Code</th>
             <th rowspan="2" class="sortable" data-key="siteType" data-type="str">Site 유형</th>
             <th rowspan="2" class="sortable" data-key="company" data-type="str">업체</th>
+            <th rowspan="2" class="sortable std-col" data-key="companyStd" data-type="str">업체명(STD)</th>
             <th rowspan="2" class="sortable" data-key="portCode" data-type="str">항구/공항 코드</th>
             <th rowspan="2" class="sortable" data-key="corpId" data-type="str">기업식별 코드</th>
             <th rowspan="2" class="sortable" data-key="duns" data-type="str">Duns No.</th>
@@ -612,8 +657,11 @@
             <th rowspan="2" class="sortable" data-key="admin" data-type="str">행정구역</th>
             <th rowspan="2" class="sortable" data-key="addrEn" data-type="str">주소(Eng)</th>
             <th rowspan="2" class="sortable" data-key="addrLocal" data-type="str">주소(Local)</th>
+            <th rowspan="2" class="sortable std-col" data-key="addrStd" data-type="str">주소(STD)</th>
             <th rowspan="2" class="sortable" data-key="lat" data-type="num">위도</th>
+            <th rowspan="2" class="sortable std-col" data-key="latStd" data-type="num">위도(STD)</th>
             <th rowspan="2" class="sortable" data-key="lon" data-type="num">경도</th>
+            <th rowspan="2" class="sortable std-col" data-key="lonStd" data-type="num">경도(STD)</th>
             <th rowspan="2" class="sortable" data-key="modified" data-type="str">수정일</th>
             <th class="g-src" colspan="4">Site 출처</th>
           </tr>
@@ -738,6 +786,32 @@
   </div>
 </div>
 
+<!-- 주소·업체명 표준화 팝업 -->
+<div class="modal-overlay" id="std-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">주소·업체명 표준화</span>
+      <button class="modal-x" id="std-close" title="닫기">&times;</button>
+    </div>
+    <div class="simres-body">
+      <div class="std-body">
+        <div class="std-note" id="std-note"></div>
+        <div class="std-targets">
+          <button class="ms-btn active" data-std-target="addr">주소</button>
+          <button class="ms-btn active" data-std-target="company">업체명</button>
+        </div>
+      </div>
+    </div>
+    <div class="simres-bar" style="justify-content:flex-end">
+      <button class="btn primary" id="std-run">진행</button>
+    </div>
+    <div class="load-overlay" id="std-loading">
+      <div class="spinner"></div>
+      <div class="load-msg">표준화 진행 중…</div>
+    </div>
+  </div>
+</div>
+
 <!-- 글로벌 기업정보 검색 팝업 -->
 <div class="modal-overlay" id="corp-modal">
   <div class="modal modal-wide">
@@ -753,7 +827,10 @@
       <div class="corp-grid">
         <div>
           <div class="corp-inputs">
-            <div class="field"><label>업체명</label><input type="text" id="c-name" placeholder="업체명 입력"></div>
+            <div class="corp-name-row">
+              <div class="field"><label>업체명</label><input type="text" id="c-name" placeholder="업체명 입력"></div>
+              <div class="field field-std"><label>표준화된 업체명</label><input type="text" id="c-name-std" class="block" readonly placeholder="표준화 후 자동 입력"></div>
+            </div>
             <div class="field"><label>Duns No.</label><input type="text" id="c-duns" placeholder="Duns No. 입력"></div>
             <div class="field"><label>기업식별코드</label><input type="text" id="c-corp" placeholder="기업식별코드 입력"></div>
             <div class="field"><label>국가/지역<span class="req">*</span></label><select id="c-country"></select></div>
@@ -765,10 +842,15 @@
           </div>
           <div class="corp-results" id="c-results"><div class="corp-empty">검색 조건을 입력하고 검색을 눌러주세요.</div></div>
         </div>
-        <div class="corp-right">
+        <div class="corp-right" style="position:relative">
           <label>입력된 주소(Eng)</label>
           <input type="text" id="c-addr" class="block" readonly placeholder="검색 결과 선택 시 자동 입력">
+          <div class="field-std" style="margin-top:10px">
+            <label>표준화된 주소</label>
+            <input type="text" id="c-addr-std" class="block" readonly placeholder="표준화 후 자동 입력">
+          </div>
           <div class="map-box" id="c-map"></div>
+          <div class="load-overlay" id="c-loading"><div class="spinner"></div><div class="load-msg">주소 표준화 중…</div></div>
         </div>
       </div>
     </div>
@@ -791,14 +873,20 @@
         <div class="field"><label>업체명(Eng)<span class="req">*</span></label><input type="text" id="m-name" placeholder="업체명 입력"></div>
         <div class="field"><label>기업식별 코드</label><input type="text" id="m-corp" placeholder="기업식별코드 입력"></div>
         <div class="field"><label>국가/지역<span class="req">*</span></label><select id="m-country"></select></div>
+        <div class="field field-std"><label>표준화된 업체명</label><input type="text" id="m-name-std" class="block" readonly placeholder="표준화 후 자동 입력"></div>
         <div class="field"><label>행정구역<span class="req">*</span></label><select id="m-admin"></select></div>
         <div class="field"><label>주소 검색</label><input type="text" id="m-addrsearch" placeholder="주소 검색어 입력" autocomplete="off"><div class="addr-suggest" id="m-suggest" style="display:none"></div></div>
-        <div class="field"></div>
         <div class="field"><label>주소(Eng)</label><input type="text" id="m-addr" class="block" readonly></div>
         <div class="field"><label>위도</label><input type="text" id="m-lat" class="block" readonly></div>
         <div class="field"><label>경도</label><input type="text" id="m-lon" class="block" readonly></div>
       </div>
+      <div class="manual-grid" style="margin-top:12px">
+        <div class="field field-std"><label>표준화된 주소</label><input type="text" id="m-addr-std" class="block" readonly placeholder="표준화 후 자동 입력"></div>
+        <div class="field field-std"><label>표준화된 위도</label><input type="text" id="m-lat-std" class="block" readonly></div>
+        <div class="field field-std"><label>표준화된 경도</label><input type="text" id="m-lon-std" class="block" readonly></div>
+      </div>
       <div class="map-box tall" id="m-map"></div>
+      <div class="load-overlay" id="m-loading"><div class="spinner"></div><div class="load-msg">주소 표준화 중…</div></div>
     </div>
   </div>
 </div>
@@ -816,10 +904,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "500 Nanjing Rd., Huangpu District, Shanghai, Shanghai 200001",
-        "lat": "31.235180",
-        "lon": "121.477500",
+        "lat": "31.24",
+        "lon": "121.48",
         "partner": "UM7K",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+        "latStd": "31.235180",
+        "lonStd": "121.477500",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S408382",
@@ -849,10 +942,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "福田区深南大道10000号, Shenzhen 518000",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "M56T",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S832753",
@@ -885,7 +983,12 @@ const DATA = {
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "CSRO",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S260648",
@@ -915,10 +1018,15 @@ const DATA = {
         "country": "KR: 한국",
         "admin": "12: Busan",
         "addr": "120 Jungang-daero  Jung-gu  Busan  Busan 48943",
-        "lat": "35.106321",
-        "lon": "129.032630",
+        "lat": "35.11",
+        "lon": "129.03",
         "partner": "U67F",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Hanla Precision",
+        "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+        "latStd": "35.106321",
+        "lonStd": "129.032630",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S918778",
@@ -948,10 +1056,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "苏州工业园区苏虹西路8号, Suzhou 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "D36I",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -984,7 +1097,12 @@ const DATA = {
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "Q99Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -1014,10 +1132,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyu@n Road, Nanshan District, Shenzhen, Guangdong 518057",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "UITU",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Zhongsheng Electronics",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S549561",
@@ -1050,7 +1173,12 @@ const DATA = {
         "lat": "34.671870",
         "lon": "135.499750",
         "partner": "B8Y7",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sakura Denshi",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S609073",
@@ -1080,10 +1208,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "墨田区押上1-1-2, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "LGRZ",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Nippon Seimitsu",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S471861",
@@ -1113,10 +1246,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Road  Suzhou Industrial Park  Suzhou  Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "UJ76",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -1146,10 +1284,15 @@ const DATA = {
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "128 Yeoui-daero  Yeongdeungpo-gu  Seoul  Seoul 07320",
-        "lat": "37.525651",
-        "lon": "126.924191",
+        "lat": "37.53",
+        "lon": "126.92",
         "partner": "ZKQQ",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S448903",
@@ -1182,7 +1325,12 @@ const DATA = {
         "lat": "37.422030",
         "lon": "-122.084000",
         "partner": "QFKA",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Summit Electronics",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S465433",
@@ -1212,10 +1360,15 @@ const DATA = {
         "country": "US: 미국",
         "admin": "IL: Illinois",
         "addr": "875 N Michigan Ave., Chicago, Illinois 60611",
-        "lat": "41.898780",
-        "lon": "-87.623380",
+        "lat": "41.90",
+        "lon": "-87.62",
         "partner": "AILR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Lakeside Components",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S732752",
@@ -1248,7 +1401,12 @@ const DATA = {
         "lat": "35.115034",
         "lon": "129.041624",
         "partner": "V2UK",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+        "latStd": "35.115034",
+        "lonStd": "129.041624",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S918778",
@@ -1280,10 +1438,15 @@ const DATA = {
         "country": "CH: 스위스",
         "admin": "SG: St. Gallen",
         "addr": "Marktgasse 8, St. Gallen, St. Gallen 9004",
-        "lat": "47.425600",
-        "lon": "9.377180",
+        "lat": "47.43",
+        "lon": "9.38",
         "partner": "V8VR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Alpine Precision",
+        "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+        "latStd": "47.425600",
+        "lonStd": "9.377180",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S465433",
@@ -1313,10 +1476,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "1-1-4 Meieki, Nakamura-ku, Nagoya",
-        "lat": "35.170920",
-        "lon": "136.881637",
+        "lat": "35.17",
+        "lon": "136.88",
         "partner": "YWT9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+        "latStd": "35.170920",
+        "lonStd": "136.881637",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S609073",
@@ -1349,7 +1517,12 @@ const DATA = {
         "lat": "47.422780",
         "lon": "9.369870",
         "partner": "SEXJ",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Bavaria Technik",
+        "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+        "latStd": "47.422780",
+        "lonStd": "9.369870",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S004220",
@@ -1382,7 +1555,12 @@ const DATA = {
         "lat": "37.257356",
         "lon": "127.052550",
         "partner": "QPEZ",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daeyang Electronics",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S970524",
@@ -1412,10 +1590,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
-        "lat": "35.168060",
-        "lon": "136.908390",
+        "lat": "35.17",
+        "lon": "136.91",
         "partner": "G4Q4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S471861",
@@ -1445,10 +1628,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S572920",
@@ -1481,7 +1669,12 @@ const DATA = {
         "lat": "35.168060",
         "lon": "136.908390",
         "partner": "UOPF",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Fuji Handotai",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S931575",
@@ -1511,10 +1704,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyuan Road, Nanshan District, Shenzhen",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "TADT",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S796334",
@@ -1544,10 +1742,15 @@ const DATA = {
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "중구 을지로 26, Seoul 04539",
-        "lat": "37.566010",
-        "lon": "126.982877",
+        "lat": "37.57",
+        "lon": "126.98",
         "partner": "D7DQ",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Hanla Precision",
+        "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+        "latStd": "37.566010",
+        "lonStd": "126.982877",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S185946",
@@ -1577,10 +1780,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "TWIG",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S549561",
@@ -1613,7 +1821,12 @@ const DATA = {
         "lat": "31.235180",
         "lon": "121.477500",
         "partner": "CAZQ",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinlong Semiconductor",
+        "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+        "latStd": "31.235180",
+        "lonStd": "121.477500",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S641860",
@@ -1643,10 +1856,15 @@ const DATA = {
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "Seoul, Seoul",
-        "lat": "37.525651",
-        "lon": "126.924191",
+        "lat": "37.53",
+        "lon": "126.92",
         "partner": "KSGR",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S607790",
@@ -1679,7 +1897,12 @@ const DATA = {
         "lat": "37.566295",
         "lon": "126.976889",
         "partner": "HF06",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+        "latStd": "37.566295",
+        "lonStd": "126.976889",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S918778",
@@ -1712,7 +1935,12 @@ const DATA = {
         "lat": "37.525651",
         "lon": "126.924191",
         "partner": "ZIK4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Nexen Components",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S929628",
@@ -1744,10 +1972,15 @@ const DATA = {
         "country": "US: 미국",
         "admin": "CA: California",
         "addr": "1600 Amphitheatre Parkway, Mountain View",
-        "lat": "37.422030",
-        "lon": "-122.084000",
+        "lat": "37.42",
+        "lon": "-122.08",
         "partner": "MLG4",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Alpine Precision",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S409084",
@@ -1777,10 +2010,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "27: Osaka",
         "addr": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
-        "lat": "34.671870",
-        "lon": "135.499750",
+        "lat": "34.67",
+        "lon": "135.50",
         "partner": "ESN2",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S548047",
@@ -1810,10 +2048,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
-        "lat": "35.676190",
-        "lon": "139.744730",
+        "lat": "35.68",
+        "lon": "139.74",
         "partner": "RR6A",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Asahi Components",
+        "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+        "latStd": "35.676190",
+        "lonStd": "139.744730",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S483115",
@@ -1843,10 +2086,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "NNEU",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S943378",
@@ -1879,7 +2127,12 @@ const DATA = {
         "lat": "37.566010",
         "lon": "126.982877",
         "partner": "C178",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Daeyang Electronics",
+        "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+        "latStd": "37.566010",
+        "lonStd": "126.982877",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S620667",
@@ -1909,10 +2162,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
-        "lat": "35.168060",
-        "lon": "136.908390",
+        "lat": "35.17",
+        "lon": "136.91",
         "partner": "G4Q4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S755557",
@@ -1942,10 +2200,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "QW2Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S542644",
@@ -1975,10 +2238,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S551271",
@@ -2008,10 +2276,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "LVF9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S541458",
@@ -2044,7 +2317,12 @@ const DATA = {
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "J8AR",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S562789",
@@ -2077,7 +2355,12 @@ const DATA = {
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "SI5C",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Hanla Precision",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S781909",
@@ -2110,7 +2393,12 @@ const DATA = {
         "lat": "22.543611",
         "lon": "114.056880",
         "partner": "DE4I",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S698303",
@@ -2140,10 +2428,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "TWIG",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S135868",
@@ -2176,7 +2469,12 @@ const DATA = {
         "lat": "31.233705",
         "lon": "121.524621",
         "partner": "AWFD",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinlong Semiconductor",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S507472",
@@ -2209,10 +2507,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyuan Road, Nanshan District, Shenzhen",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "TADT",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": true
       },
       "modified": "2025-12-25"
     },
@@ -2227,10 +2530,15 @@ const DATA = {
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "墨田区押上1-1-2, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "N6KC",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Nippon Seimitsu",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "modified": "2024-11-10"
     },
@@ -2245,10 +2553,15 @@ const DATA = {
         "country": "US: 미국",
         "admin": "IL: Illinois",
         "addr": "875 N Michigan Avenue, Chicago",
-        "lat": "41.898780",
-        "lon": "-87.623380",
+        "lat": "41.90",
+        "lon": "-87.62",
         "partner": "PICD",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Summit Electronics",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
       },
       "modified": "2025-02-25"
     },
@@ -2263,10 +2576,15 @@ const DATA = {
         "country": "KR: 한국",
         "admin": "09: Gyeonggi-do",
         "addr": "1 Samsung-ro, Yeongtong-gu, Suwon",
-        "lat": "37.257356",
-        "lon": "127.052550",
+        "lat": "37.26",
+        "lon": "127.05",
         "partner": "KMQR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": true
       },
       "modified": "2024-07-17"
     },
@@ -2281,10 +2599,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "福田区深南大道10000号, Shenzhen 518000",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "M56T",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "modified": "2024-02-26"
     },
@@ -2302,7 +2625,12 @@ const DATA = {
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "CSRO",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": true
       },
       "modified": "2026-09-07"
     },
@@ -2317,10 +2645,15 @@ const DATA = {
         "country": "US: 미국",
         "admin": "CA: California",
         "addr": "1600 Amphitheatre Parkway, Mountain View",
-        "lat": "37.422030",
-        "lon": "-122.084000",
+        "lat": "37.42",
+        "lon": "-122.08",
         "partner": "MLG4",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Alpine Precision",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": true
       },
       "modified": "2025-10-23"
     },
@@ -2335,10 +2668,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "10000 Shennan Avenue, Futian District, Shenzhen",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "QC3R",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Zhongsheng Electronics",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "modified": "2026-03-14"
     },
@@ -2356,7 +2694,12 @@ const DATA = {
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "J8AR",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2026-08-01"
     },
@@ -2374,7 +2717,12 @@ const DATA = {
         "lat": "37.566295",
         "lon": "126.976889",
         "partner": "AQ9B",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+        "latStd": "37.566295",
+        "lonStd": "126.976889",
+        "stdFilled": true
       },
       "modified": "2026-02-13"
     },
@@ -2392,7 +2740,12 @@ const DATA = {
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "Q99Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2025-09-05"
     },
@@ -2407,10 +2760,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "LVF9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2024-01-24"
     },
@@ -2428,7 +2786,12 @@ const DATA = {
         "lat": "34.671870",
         "lon": "135.499750",
         "partner": "B8Y7",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sakura Denshi",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "modified": "2026-07-22"
     },
@@ -2443,10 +2806,15 @@ const DATA = {
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "modified": "2025-07-03"
     }
@@ -2467,10 +2835,15 @@ const MASTER = [
     "admin": "13: Seoul",
     "addrEn": "중구 을지로 26, Seoul 04539",
     "addrLocal": "서울특별시 중구 을지로 26 (04539)",
-    "lat": "37.566010",
-    "lon": "126.982877",
+    "lat": "37.57",
+    "lon": "126.98",
     "modified": "2026-02-11",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Hanla Precision",
+    "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+    "latStd": "37.566010",
+    "lonStd": "126.982877",
+    "stdFilled": false
   },
   {
     "no": 2,
@@ -2485,10 +2858,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
     "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-    "lat": "35.676190",
-    "lon": "139.744730",
+    "lat": "35.68",
+    "lon": "139.74",
     "modified": "2026-06-09",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": false
   },
   {
     "no": 3,
@@ -2506,7 +2884,12 @@ const MASTER = [
     "lat": "22.543611",
     "lon": "114.056880",
     "modified": "2026-06-07",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+    "latStd": "22.543611",
+    "lonStd": "114.056880",
+    "stdFilled": true
   },
   {
     "no": 4,
@@ -2521,10 +2904,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "55 Jung@ng-daero, Dong-gu, Busan, Busan 48821",
     "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-    "lat": "35.115034",
-    "lon": "129.041624",
+    "lat": "35.12",
+    "lon": "129.04",
     "modified": "2025-03-08",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": false
   },
   {
     "no": 5,
@@ -2539,10 +2927,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "1 Keyuan Road, Nanshan District, Shenzhen",
     "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-    "lat": "22.537300",
-    "lon": "113.947700",
+    "lat": "22.54",
+    "lon": "113.95",
     "modified": "2025-12-25",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+    "latStd": "22.537300",
+    "lonStd": "113.947700",
+    "stdFilled": true
   },
   {
     "no": 6,
@@ -2557,10 +2950,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "墨田区押上1-1-2, Tokyo 131-0045",
     "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-    "lat": "35.710060",
-    "lon": "139.810700",
+    "lat": "35.71",
+    "lon": "139.81",
     "modified": "2024-11-10",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 7,
@@ -2578,7 +2976,12 @@ const MASTER = [
     "lat": "37.566295",
     "lon": "126.976889",
     "modified": "2026-08-15",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+    "latStd": "37.566295",
+    "lonStd": "126.976889",
+    "stdFilled": false
   },
   {
     "no": 8,
@@ -2593,10 +2996,15 @@ const MASTER = [
     "admin": "13: Seoul",
     "addrEn": "Seoul, Seoul",
     "addrLocal": "서울특별시 영등포구 여의대로 128 (07320)",
-    "lat": "37.525651",
-    "lon": "126.924191",
+    "lat": "37.53",
+    "lon": "126.92",
     "modified": "2024-09-17",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Jinwoo Semiconductor",
+    "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+    "latStd": "37.525651",
+    "lonStd": "126.924191",
+    "stdFilled": false
   },
   {
     "no": 9,
@@ -2614,7 +3022,12 @@ const MASTER = [
     "lat": "35.170920",
     "lon": "136.881637",
     "modified": "2026-04-22",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Toyo Materials",
+    "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+    "latStd": "35.170920",
+    "lonStd": "136.881637",
+    "stdFilled": true
   },
   {
     "no": 10,
@@ -2629,10 +3042,15 @@ const MASTER = [
     "admin": "23: Aichi",
     "addrEn": "1-1-4 Meieki, Nakamura-ku, Nagoya",
     "addrLocal": "450-0002 愛知県名古屋市中村区名駅1-1-4",
-    "lat": "35.170920",
-    "lon": "136.881637",
+    "lat": "35.17",
+    "lon": "136.88",
     "modified": "2025-10-05",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Asahi Components",
+    "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+    "latStd": "35.170920",
+    "lonStd": "136.881637",
+    "stdFilled": false
   },
   {
     "no": 11,
@@ -2647,10 +3065,15 @@ const MASTER = [
     "admin": "IL: Illinois",
     "addrEn": "875 N Michigan Avenue, Chicago",
     "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-    "lat": "41.898780",
-    "lon": "-87.623380",
+    "lat": "41.90",
+    "lon": "-87.62",
     "modified": "2025-02-25",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Summit Electronics",
+    "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+    "latStd": "41.898780",
+    "lonStd": "-87.623380",
+    "stdFilled": true
   },
   {
     "no": 12,
@@ -2665,10 +3088,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "120 Jungang-daero, Jung-gu, Busan",
     "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-    "lat": "35.106321",
-    "lon": "129.032630",
+    "lat": "35.11",
+    "lon": "129.03",
     "modified": "2026-08-26",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+    "latStd": "35.106321",
+    "lonStd": "129.032630",
+    "stdFilled": true
   },
   {
     "no": 13,
@@ -2683,10 +3111,15 @@ const MASTER = [
     "admin": "09: Gyeonggi-do",
     "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
     "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-    "lat": "37.257356",
-    "lon": "127.052550",
+    "lat": "37.26",
+    "lon": "127.05",
     "modified": "2024-07-17",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+    "latStd": "37.257356",
+    "lonStd": "127.052550",
+    "stdFilled": true
   },
   {
     "no": 14,
@@ -2701,10 +3134,15 @@ const MASTER = [
     "admin": "020: Shanghai",
     "addrEn": "500 Nanjing Rd., Huangpu District, Shanghai, Shanghai 200001",
     "addrLocal": "上海市黄浦区南京路500号 200001",
-    "lat": "31.235180",
-    "lon": "121.477500",
+    "lat": "31.24",
+    "lon": "121.48",
     "modified": "2026-06-05",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+    "latStd": "31.235180",
+    "lonStd": "121.477500",
+    "stdFilled": false
   },
   {
     "no": 15,
@@ -2719,10 +3157,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
     "addrLocal": "江苏省苏州市星海街200号 215028",
-    "lat": "31.322450",
-    "lon": "120.717800",
+    "lat": "31.32",
+    "lon": "120.72",
     "modified": "2026-09-08",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Zhongsheng Electronics",
+    "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+    "latStd": "31.322450",
+    "lonStd": "120.717800",
+    "stdFilled": true
   },
   {
     "no": 16,
@@ -2737,10 +3180,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "福田区深南大道10000号, Shenzhen 518000",
     "addrLocal": "广东省深圳市福田区深南大道10000号 518000",
-    "lat": "22.543611",
-    "lon": "114.056880",
+    "lat": "22.54",
+    "lon": "114.06",
     "modified": "2024-02-26",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+    "latStd": "22.543611",
+    "lonStd": "114.056880",
+    "stdFilled": true
   },
   {
     "no": 17,
@@ -2758,7 +3206,12 @@ const MASTER = [
     "lat": "37.287280",
     "lon": "127.046370",
     "modified": "2026-09-07",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Jinwoo Semiconductor",
+    "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+    "latStd": "37.287280",
+    "lonStd": "127.046370",
+    "stdFilled": true
   },
   {
     "no": 18,
@@ -2776,7 +3229,12 @@ const MASTER = [
     "lat": "34.671870",
     "lon": "135.499750",
     "modified": "2025-05-14",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Sakura Denshi",
+    "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+    "latStd": "34.671870",
+    "lonStd": "135.499750",
+    "stdFilled": true
   },
   {
     "no": 19,
@@ -2791,10 +3249,15 @@ const MASTER = [
     "admin": "CA: California",
     "addrEn": "1600 Amphitheatre Parkway, Mountain View",
     "addrLocal": "1600 Amphitheatre Parkway, 94043 Mountain View",
-    "lat": "37.422030",
-    "lon": "-122.084000",
+    "lat": "37.42",
+    "lon": "-122.08",
     "modified": "2025-10-23",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Alpine Precision",
+    "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+    "latStd": "37.422030",
+    "lonStd": "-122.084000",
+    "stdFilled": true
   },
   {
     "no": 20,
@@ -2809,10 +3272,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "10000 Shennan Avenue, Futian District, Shenzhen",
     "addrLocal": "广东省深圳市福田区深南大道10000号 518000",
-    "lat": "22.543611",
-    "lon": "114.056880",
+    "lat": "22.54",
+    "lon": "114.06",
     "modified": "2026-03-14",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Zhongsheng Electronics",
+    "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+    "latStd": "22.543611",
+    "lonStd": "114.056880",
+    "stdFilled": true
   },
   {
     "no": 21,
@@ -2830,7 +3298,12 @@ const MASTER = [
     "lat": "35.115034",
     "lon": "129.041624",
     "modified": "2025-02-04",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": true
   },
   {
     "no": 22,
@@ -2848,7 +3321,12 @@ const MASTER = [
     "lat": "31.315610",
     "lon": "120.686340",
     "modified": "2026-08-01",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 23,
@@ -2863,10 +3341,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "120 Jungang-daero  Jung-gu  Busan  Busan 48943",
     "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-    "lat": "35.106321",
-    "lon": "129.032630",
+    "lat": "35.11",
+    "lon": "129.03",
     "modified": "2024-10-16",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Hanla Precision",
+    "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+    "latStd": "35.106321",
+    "lonStd": "129.032630",
+    "stdFilled": false
   },
   {
     "no": 24,
@@ -2881,10 +3364,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "苏州工业园区苏虹西路8号, Suzhou 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2026-01-08",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 25,
@@ -2899,10 +3387,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
     "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-    "lat": "35.710060",
-    "lon": "139.810700",
+    "lat": "35.71",
+    "lon": "139.81",
     "modified": "2024-11-22",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Daiwa Electronics",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": false
   },
   {
     "no": 26,
@@ -2920,7 +3413,12 @@ const MASTER = [
     "lat": "37.566295",
     "lon": "126.976889",
     "modified": "2026-02-13",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+    "latStd": "37.566295",
+    "lonStd": "126.976889",
+    "stdFilled": true
   },
   {
     "no": 27,
@@ -2935,10 +3433,15 @@ const MASTER = [
     "admin": "CA: California",
     "addrEn": "1600 Amphitheatre Parkway, Mountain View 94043",
     "addrLocal": "1600 Amphitheatre Parkway, 94043 Mountain View",
-    "lat": "37.422030",
-    "lon": "-122.084000",
+    "lat": "37.42",
+    "lon": "-122.08",
     "modified": "2025-11-08",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Summit Electronics",
+    "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+    "latStd": "37.422030",
+    "lonStd": "-122.084000",
+    "stdFilled": true
   },
   {
     "no": 28,
@@ -2956,7 +3459,12 @@ const MASTER = [
     "lat": "31.315610",
     "lon": "120.686340",
     "modified": "2025-09-05",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 29,
@@ -2974,7 +3482,12 @@ const MASTER = [
     "lat": "35.168060",
     "lon": "136.908390",
     "modified": "2025-12-23",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Fuji Handotai",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": false
   },
   {
     "no": 30,
@@ -2989,10 +3502,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2024-01-24",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Dongfang Precision",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 31,
@@ -3007,10 +3525,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "1 Keyu@n Road, Nanshan District, Shenzhen, Guangdong 518057",
     "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-    "lat": "22.537300",
-    "lon": "113.947700",
+    "lat": "22.54",
+    "lon": "113.95",
     "modified": "2024-01-17",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Zhongsheng Electronics",
+    "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+    "latStd": "22.537300",
+    "lonStd": "113.947700",
+    "stdFilled": false
   },
   {
     "no": 32,
@@ -3028,7 +3551,12 @@ const MASTER = [
     "lat": "34.671870",
     "lon": "135.499750",
     "modified": "2026-07-22",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Sakura Denshi",
+    "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+    "latStd": "34.671870",
+    "lonStd": "135.499750",
+    "stdFilled": true
   },
   {
     "no": 33,
@@ -3043,10 +3571,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "墨田区押上1-1-2, Tokyo 131-0045",
     "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-    "lat": "35.710060",
-    "lon": "139.810700",
+    "lat": "35.71",
+    "lon": "139.81",
     "modified": "2026-06-10",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 34,
@@ -3061,10 +3594,15 @@ const MASTER = [
     "admin": "020: Shanghai",
     "addrEn": "1000 Century Avenue, Pudong New District, Shanghai",
     "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-    "lat": "31.233705",
-    "lon": "121.524621",
+    "lat": "31.23",
+    "lon": "121.52",
     "modified": "2025-07-03",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Dongfang Precision",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": true
   },
   {
     "no": 35,
@@ -3082,7 +3620,12 @@ const MASTER = [
     "lat": "37.287280",
     "lon": "127.046370",
     "modified": "2024-07-09",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Hanla Precision",
+    "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+    "latStd": "37.287280",
+    "lonStd": "127.046370",
+    "stdFilled": false
   },
   {
     "no": 36,
@@ -3097,10 +3640,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "8 Suhong West Road  Suzhou Industrial Park  Suzhou  Jiangsu 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2026-06-26",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 37,
@@ -3115,10 +3663,15 @@ const MASTER = [
     "admin": "BY: Bavaria",
     "addrEn": "Marienplatz 8  Munich  Bavaria 80331",
     "addrLocal": "Marienplatz 8, 80331 München",
-    "lat": "48.137150",
-    "lon": "11.575490",
+    "lat": "48.14",
+    "lon": "11.58",
     "modified": "2025-08-26",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Rheinland Materials",
+    "addrStd": "Marienplatz 8, Munich, Bavaria 80331",
+    "latStd": "48.137150",
+    "lonStd": "11.575490",
+    "stdFilled": true
   },
   {
     "no": 38,
@@ -3133,10 +3686,15 @@ const MASTER = [
     "admin": "13: Seoul",
     "addrEn": "128 Yeoui-daero  Yeongdeungpo-gu  Seoul  Seoul 07320",
     "addrLocal": "서울특별시 영등포구 여의대로 128 (07320)",
-    "lat": "37.525651",
-    "lon": "126.924191",
+    "lat": "37.53",
+    "lon": "126.92",
     "modified": "2026-03-06",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+    "latStd": "37.525651",
+    "lonStd": "126.924191",
+    "stdFilled": true
   },
   {
     "no": 39,
@@ -3151,10 +3709,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2025-03-27",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 40,
@@ -3172,7 +3735,12 @@ const MASTER = [
     "lat": "37.422030",
     "lon": "-122.084000",
     "modified": "2025-07-15",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Summit Electronics",
+    "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+    "latStd": "37.422030",
+    "lonStd": "-122.084000",
+    "stdFilled": false
   },
   {
     "no": 41,
@@ -3187,10 +3755,15 @@ const MASTER = [
     "admin": "IL: Illinois",
     "addrEn": "875 N Michigan Ave., Chicago, Illinois 60611",
     "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-    "lat": "41.898780",
-    "lon": "-87.623380",
+    "lat": "41.90",
+    "lon": "-87.62",
     "modified": "2025-08-13",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Lakeside Components",
+    "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+    "latStd": "41.898780",
+    "lonStd": "-87.623380",
+    "stdFilled": true
   },
   {
     "no": 42,
@@ -3208,7 +3781,12 @@ const MASTER = [
     "lat": "35.115034",
     "lon": "129.041624",
     "modified": "2025-04-12",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": true
   },
   {
     "no": 43,
@@ -3223,10 +3801,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
     "addrLocal": "江苏省苏州市星海街200号 215028",
-    "lat": "31.322450",
-    "lon": "120.717800",
+    "lat": "31.32",
+    "lon": "120.72",
     "modified": "2026-09-01",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+    "latStd": "31.322450",
+    "lonStd": "120.717800",
+    "stdFilled": true
   },
   {
     "no": 44,
@@ -3244,7 +3827,12 @@ const MASTER = [
     "lat": "31.233705",
     "lon": "121.524621",
     "modified": "2024-06-12",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Jinlong Semiconductor",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": false
   },
   {
     "no": 45,
@@ -3262,7 +3850,12 @@ const MASTER = [
     "lat": "35.710060",
     "lon": "139.810700",
     "modified": "2025-03-10",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Sakura Denshi",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 46,
@@ -3280,7 +3873,12 @@ const MASTER = [
     "lat": "37.566010",
     "lon": "126.982877",
     "modified": "2025-01-24",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Daeyang Electronics",
+    "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+    "latStd": "37.566010",
+    "lonStd": "126.982877",
+    "stdFilled": true
   },
   {
     "no": 47,
@@ -3295,10 +3893,15 @@ const MASTER = [
     "admin": "27: Osaka",
     "addrEn": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
     "addrLocal": "542-0086 大阪府中央区西心斎橋2-1-33",
-    "lat": "34.671870",
-    "lon": "135.499750",
+    "lat": "34.67",
+    "lon": "135.50",
     "modified": "2024-02-28",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Asahi Components",
+    "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+    "latStd": "34.671870",
+    "lonStd": "135.499750",
+    "stdFilled": true
   },
   {
     "no": 48,
@@ -3313,10 +3916,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
     "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-    "lat": "35.676190",
-    "lon": "139.744730",
+    "lat": "35.68",
+    "lon": "139.74",
     "modified": "2026-06-27",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Asahi Components",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": true
   },
   {
     "no": 49,
@@ -3331,10 +3939,15 @@ const MASTER = [
     "admin": "23: Aichi",
     "addrEn": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
     "addrLocal": "460-0008 愛知県名古屋市中区栄3-1-1",
-    "lat": "35.168060",
-    "lon": "136.908390",
+    "lat": "35.17",
+    "lon": "136.91",
     "modified": "2025-04-19",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Asahi Components",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": true
   },
   {
     "no": 50,
@@ -3352,7 +3965,12 @@ const MASTER = [
     "lat": "35.676190",
     "lon": "139.744730",
     "modified": "2025-11-12",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Sakura Denshi",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": false
   },
   {
     "no": 51,
@@ -3370,7 +3988,12 @@ const MASTER = [
     "lat": "37.525651",
     "lon": "126.924191",
     "modified": "2026-05-21",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Nexen Components",
+    "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+    "latStd": "37.525651",
+    "lonStd": "126.924191",
+    "stdFilled": true
   },
   {
     "no": 52,
@@ -3385,10 +4008,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "2-11-1 Nagatacho  Chiyoda-ku  Tokyo  Tokyo 100-0014",
     "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-    "lat": "35.676190",
-    "lon": "139.744730",
+    "lat": "35.68",
+    "lon": "139.74",
     "modified": "2026-04-07",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": false
   },
   {
     "no": 53,
@@ -3403,10 +4031,15 @@ const MASTER = [
     "admin": "SG: St. Gallen",
     "addrEn": "Marktgasse 8, St. Gallen, St. Gallen 9004",
     "addrLocal": "Marktgasse 8, 9004 St. Gallen",
-    "lat": "47.425600",
-    "lon": "9.377180",
+    "lat": "47.43",
+    "lon": "9.38",
     "modified": "2025-10-19",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Alpine Precision",
+    "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+    "latStd": "47.425600",
+    "lonStd": "9.377180",
+    "stdFilled": true
   },
   {
     "no": 54,
@@ -3421,10 +4054,15 @@ const MASTER = [
     "admin": "23: Aichi",
     "addrEn": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
     "addrLocal": "460-0008 愛知県名古屋市中区栄3-1-1",
-    "lat": "35.168060",
-    "lon": "136.908390",
+    "lat": "35.17",
+    "lon": "136.91",
     "modified": "2025-08-15",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Daiwa Electronics",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": true
   },
   {
     "no": 55,
@@ -3439,10 +4077,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "Shenzhen, Guangdong",
     "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-    "lat": "22.537300",
-    "lon": "113.947700",
+    "lat": "22.54",
+    "lon": "113.95",
     "modified": "2024-11-14",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+    "latStd": "22.537300",
+    "lonStd": "113.947700",
+    "stdFilled": true
   },
   {
     "no": 56,
@@ -3460,7 +4103,12 @@ const MASTER = [
     "lat": "35.168060",
     "lon": "136.908390",
     "modified": "2025-03-02",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": false
   },
   {
     "no": 57,
@@ -3478,7 +4126,12 @@ const MASTER = [
     "lat": "31.315610",
     "lon": "120.686340",
     "modified": "2026-01-19",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Dongfang Precision",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 58,
@@ -3493,10 +4146,15 @@ const MASTER = [
     "admin": "020: Shanghai",
     "addrEn": "1000 Century Avenue, Pudong New District, Shanghai",
     "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-    "lat": "31.233705",
-    "lon": "121.524621",
+    "lat": "31.23",
+    "lon": "121.52",
     "modified": "2025-08-10",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Dongfang Precision",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": false
   },
   {
     "no": 59,
@@ -3514,7 +4172,12 @@ const MASTER = [
     "lat": "35.170920",
     "lon": "136.881637",
     "modified": "2025-12-06",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Fuji Handotai",
+    "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+    "latStd": "35.170920",
+    "lonStd": "136.881637",
+    "stdFilled": false
   },
   {
     "no": 60,
@@ -3529,10 +4192,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "千代田区永田町2-11-1, Tokyo 100-0014",
     "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-    "lat": "35.676190",
-    "lon": "139.744730",
+    "lat": "35.68",
+    "lon": "139.74",
     "modified": "2026-07-28",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Asahi Components",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": true
   },
   {
     "no": 61,
@@ -3550,7 +4218,12 @@ const MASTER = [
     "lat": "47.425600",
     "lon": "9.377180",
     "modified": "2025-08-08",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Summit Electronics",
+    "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+    "latStd": "47.425600",
+    "lonStd": "9.377180",
+    "stdFilled": true
   },
   {
     "no": 62,
@@ -3565,10 +4238,15 @@ const MASTER = [
     "admin": "020: Shanghai",
     "addrEn": "Shanghai, Shanghai",
     "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-    "lat": "31.233705",
-    "lon": "121.524621",
+    "lat": "31.23",
+    "lon": "121.52",
     "modified": "2025-05-10",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Zhongsheng Electronics",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": true
   },
   {
     "no": 63,
@@ -3586,7 +4264,12 @@ const MASTER = [
     "lat": "35.168060",
     "lon": "136.908390",
     "modified": "2025-12-27",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Daiwa Electronics",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": true
   },
   {
     "no": 64,
@@ -3601,10 +4284,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "Shenzhen, Guangdong",
     "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-    "lat": "22.537300",
-    "lon": "113.947700",
+    "lat": "22.54",
+    "lon": "113.95",
     "modified": "2025-12-04",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Ruifeng Materials",
+    "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+    "latStd": "22.537300",
+    "lonStd": "113.947700",
+    "stdFilled": true
   },
   {
     "no": 65,
@@ -3619,10 +4307,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "Suzhou, Jiangsu",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2024-03-07",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Ruifeng Materials",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 66,
@@ -3640,7 +4333,12 @@ const MASTER = [
     "lat": "34.671870",
     "lon": "135.499750",
     "modified": "2026-05-07",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Asahi Components",
+    "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+    "latStd": "34.671870",
+    "lonStd": "135.499750",
+    "stdFilled": true
   },
   {
     "no": 67,
@@ -3655,10 +4353,15 @@ const MASTER = [
     "admin": "13: Seoul",
     "addrEn": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
     "addrLocal": "서울특별시 중구 세종대로 14 (04524)",
-    "lat": "37.566295",
-    "lon": "126.976889",
+    "lat": "37.57",
+    "lon": "126.98",
     "modified": "2025-06-25",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+    "latStd": "37.566295",
+    "lonStd": "126.976889",
+    "stdFilled": true
   },
   {
     "no": 68,
@@ -3676,7 +4379,12 @@ const MASTER = [
     "lat": "37.257356",
     "lon": "127.052550",
     "modified": "2025-04-25",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Daeyang Electronics",
+    "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+    "latStd": "37.257356",
+    "lonStd": "127.052550",
+    "stdFilled": false
   },
   {
     "no": 69,
@@ -3694,7 +4402,12 @@ const MASTER = [
     "lat": "47.422780",
     "lon": "9.369870",
     "modified": "2025-03-15",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Bavaria Technik",
+    "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+    "latStd": "47.422780",
+    "lonStd": "9.369870",
+    "stdFilled": true
   },
   {
     "no": 70,
@@ -3709,10 +4422,15 @@ const MASTER = [
     "admin": "IL: Illinois",
     "addrEn": "875 N Michigan Avenue  Chicago  Illinois 60611",
     "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-    "lat": "41.898780",
-    "lon": "-87.623380",
+    "lat": "41.90",
+    "lon": "-87.62",
     "modified": "2025-04-15",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Rheintal Materials",
+    "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+    "latStd": "41.898780",
+    "lonStd": "-87.623380",
+    "stdFilled": false
   },
   {
     "no": 71,
@@ -3727,10 +4445,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
     "addrLocal": "江苏省苏州市星海街200号 215028",
-    "lat": "31.322450",
-    "lon": "120.717800",
+    "lat": "31.32",
+    "lon": "120.72",
     "modified": "2025-09-28",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Zhongsheng Electronics",
+    "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+    "latStd": "31.322450",
+    "lonStd": "120.717800",
+    "stdFilled": true
   },
   {
     "no": 72,
@@ -3748,7 +4471,12 @@ const MASTER = [
     "lat": "35.168060",
     "lon": "136.908390",
     "modified": "2024-01-18",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Sakura Denshi",
+    "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+    "latStd": "35.168060",
+    "lonStd": "136.908390",
+    "stdFilled": true
   },
   {
     "no": 73,
@@ -3763,10 +4491,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "120 Jung@ng-daero, Jung-gu, Busan, Busan 48943",
     "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-    "lat": "35.106321",
-    "lon": "129.032630",
+    "lat": "35.11",
+    "lon": "129.03",
     "modified": "2025-09-09",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+    "latStd": "35.106321",
+    "lonStd": "129.032630",
+    "stdFilled": false
   },
   {
     "no": 74,
@@ -3781,10 +4514,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
     "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-    "lat": "35.710060",
-    "lon": "139.810700",
+    "lat": "35.71",
+    "lon": "139.81",
     "modified": "2025-02-18",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Asahi Components",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 75,
@@ -3802,7 +4540,12 @@ const MASTER = [
     "lat": "37.422030",
     "lon": "-122.084000",
     "modified": "2025-11-13",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Alpine Precision",
+    "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+    "latStd": "37.422030",
+    "lonStd": "-122.084000",
+    "stdFilled": true
   },
   {
     "no": 76,
@@ -3817,10 +4560,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "중구 중앙대로 120, Busan 48943",
     "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-    "lat": "35.106321",
-    "lon": "129.032630",
+    "lat": "35.11",
+    "lon": "129.03",
     "modified": "2025-04-11",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Jinwoo Semiconductor",
+    "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+    "latStd": "35.106321",
+    "lonStd": "129.032630",
+    "stdFilled": false
   },
   {
     "no": 77,
@@ -3835,10 +4583,15 @@ const MASTER = [
     "admin": "13: Seoul",
     "addrEn": "14 Sejong-d@ero, Jung-gu, Seoul, Seoul 04524",
     "addrLocal": "서울특별시 중구 세종대로 14 (04524)",
-    "lat": "37.566295",
-    "lon": "126.976889",
+    "lat": "37.57",
+    "lon": "126.98",
     "modified": "2025-11-21",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+    "latStd": "37.566295",
+    "lonStd": "126.976889",
+    "stdFilled": true
   },
   {
     "no": 78,
@@ -3853,10 +4606,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "苏州工业园区苏虹西路8号, Suzhou 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2026-05-08",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Ruifeng Materials",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": true
   },
   {
     "no": 79,
@@ -3871,10 +4629,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "8 Suhong West Road, Suzhou Industrial Park, Suzhou",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2026-06-07",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": false
   },
   {
     "no": 80,
@@ -3889,10 +4652,15 @@ const MASTER = [
     "admin": "440: Guangdong",
     "addrEn": "1 Keyuan Road  Nanshan District  Shenzhen  Guangdong 518057",
     "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-    "lat": "22.537300",
-    "lon": "113.947700",
+    "lat": "22.54",
+    "lon": "113.95",
     "modified": "2026-07-01",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Ruifeng Materials",
+    "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+    "latStd": "22.537300",
+    "lonStd": "113.947700",
+    "stdFilled": false
   },
   {
     "no": 81,
@@ -3910,7 +4678,12 @@ const MASTER = [
     "lat": "35.115034",
     "lon": "129.041624",
     "modified": "2026-08-25",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": true
   },
   {
     "no": 82,
@@ -3925,10 +4698,15 @@ const MASTER = [
     "admin": "020: Shanghai",
     "addrEn": "浦东新区世纪大道1000号, Shanghai 200120",
     "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-    "lat": "31.233705",
-    "lon": "121.524621",
+    "lat": "31.23",
+    "lon": "121.52",
     "modified": "2026-05-26",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Jinlong Semiconductor",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": false
   },
   {
     "no": 83,
@@ -3943,10 +4721,15 @@ const MASTER = [
     "admin": "100: Jiangsu",
     "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
     "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-    "lat": "31.315610",
-    "lon": "120.686340",
+    "lat": "31.32",
+    "lon": "120.69",
     "modified": "2026-02-26",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Huaxin Technology",
+    "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+    "latStd": "31.315610",
+    "lonStd": "120.686340",
+    "stdFilled": false
   },
   {
     "no": 84,
@@ -3964,7 +4747,12 @@ const MASTER = [
     "lat": "37.566010",
     "lon": "126.982877",
     "modified": "2025-06-12",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Daeyang Electronics",
+    "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+    "latStd": "37.566010",
+    "lonStd": "126.982877",
+    "stdFilled": true
   },
   {
     "no": 85,
@@ -3982,7 +4770,12 @@ const MASTER = [
     "lat": "31.233705",
     "lon": "121.524621",
     "modified": "2025-09-23",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Haiyuan Components",
+    "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+    "latStd": "31.233705",
+    "lonStd": "121.524621",
+    "stdFilled": true
   },
   {
     "no": 86,
@@ -4000,7 +4793,12 @@ const MASTER = [
     "lat": "35.710060",
     "lon": "139.810700",
     "modified": "2025-11-19",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Nippon Seimitsu",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 87,
@@ -4015,10 +4813,15 @@ const MASTER = [
     "admin": "SG: St. Gallen",
     "addrEn": "Bahnhofstrasse 12  St. Gallen  St. Gallen 9000",
     "addrLocal": "Bahnhofstrasse 12, 9000 St. Gallen",
-    "lat": "47.422780",
-    "lon": "9.369870",
+    "lat": "47.42",
+    "lon": "9.37",
     "modified": "2024-05-28",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Pioneer Semiconductor",
+    "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+    "latStd": "47.422780",
+    "lonStd": "9.369870",
+    "stdFilled": true
   },
   {
     "no": 88,
@@ -4033,10 +4836,15 @@ const MASTER = [
     "admin": "09: Gyeonggi-do",
     "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
     "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-    "lat": "37.257356",
-    "lon": "127.052550",
+    "lat": "37.26",
+    "lon": "127.05",
     "modified": "2026-03-24",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+    "latStd": "37.257356",
+    "lonStd": "127.052550",
+    "stdFilled": true
   },
   {
     "no": 89,
@@ -4051,10 +4859,15 @@ const MASTER = [
     "admin": "09: Gyeonggi-do",
     "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
     "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-    "lat": "37.257356",
-    "lon": "127.052550",
+    "lat": "37.26",
+    "lon": "127.05",
     "modified": "2026-09-05",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Nexen Components",
+    "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+    "latStd": "37.257356",
+    "lonStd": "127.052550",
+    "stdFilled": true
   },
   {
     "no": 90,
@@ -4072,7 +4885,12 @@ const MASTER = [
     "lat": "37.566295",
     "lon": "126.976889",
     "modified": "2026-06-25",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+    "latStd": "37.566295",
+    "lonStd": "126.976889",
+    "stdFilled": true
   },
   {
     "no": 91,
@@ -4087,10 +4905,15 @@ const MASTER = [
     "admin": "SG: St. Gallen",
     "addrEn": "Marktgasse 8, St. Gallen 9004",
     "addrLocal": "Marktgasse 8, 9004 St. Gallen",
-    "lat": "47.425600",
-    "lon": "9.377180",
+    "lat": "47.43",
+    "lon": "9.38",
     "modified": "2025-08-18",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Bavaria Technik",
+    "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+    "latStd": "47.425600",
+    "lonStd": "9.377180",
+    "stdFilled": false
   },
   {
     "no": 92,
@@ -4105,10 +4928,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "2-11-1 N@gatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
     "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-    "lat": "35.676190",
-    "lon": "139.744730",
+    "lat": "35.68",
+    "lon": "139.74",
     "modified": "2024-07-23",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Toyo Materials",
+    "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+    "latStd": "35.676190",
+    "lonStd": "139.744730",
+    "stdFilled": false
   },
   {
     "no": 93,
@@ -4123,10 +4951,15 @@ const MASTER = [
     "admin": "23: Aichi",
     "addrEn": "1-1-4 Meieki  Nakamura-ku  Nagoya  Aichi 450-0002",
     "addrLocal": "450-0002 愛知県名古屋市中村区名駅1-1-4",
-    "lat": "35.170920",
-    "lon": "136.881637",
+    "lat": "35.17",
+    "lon": "136.88",
     "modified": "2025-05-19",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Daiwa Electronics",
+    "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+    "latStd": "35.170920",
+    "lonStd": "136.881637",
+    "stdFilled": true
   },
   {
     "no": 94,
@@ -4144,7 +4977,12 @@ const MASTER = [
     "lat": "37.287280",
     "lon": "127.046370",
     "modified": "2025-05-21",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Hanla Precision",
+    "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+    "latStd": "37.287280",
+    "lonStd": "127.046370",
+    "stdFilled": true
   },
   {
     "no": 95,
@@ -4162,7 +5000,12 @@ const MASTER = [
     "lat": "35.710060",
     "lon": "139.810700",
     "modified": "2026-05-27",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Asahi Components",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": false
   },
   {
     "no": 96,
@@ -4177,10 +5020,15 @@ const MASTER = [
     "admin": "13: Tokyo",
     "addrEn": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
     "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-    "lat": "35.710060",
-    "lon": "139.810700",
+    "lat": "35.71",
+    "lon": "139.81",
     "modified": "2026-09-08",
-    "source": "Factory Information"
+    "source": "Factory Information",
+    "companyStd": "Daiwa Electronics",
+    "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+    "latStd": "35.710060",
+    "lonStd": "139.810700",
+    "stdFilled": true
   },
   {
     "no": 97,
@@ -4195,10 +5043,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
     "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-    "lat": "35.115034",
-    "lon": "129.041624",
+    "lat": "35.12",
+    "lon": "129.04",
     "modified": "2024-11-26",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Kyungin Chemical",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": true
   },
   {
     "no": 98,
@@ -4216,7 +5069,12 @@ const MASTER = [
     "lat": "31.235180",
     "lon": "121.477500",
     "modified": "2024-11-02",
-    "source": "협력사등록"
+    "source": "협력사등록",
+    "companyStd": "Jinlong Semiconductor",
+    "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+    "latStd": "31.235180",
+    "lonStd": "121.477500",
+    "stdFilled": true
   },
   {
     "no": 99,
@@ -4234,7 +5092,12 @@ const MASTER = [
     "lat": "37.257356",
     "lon": "127.052550",
     "modified": "2025-09-17",
-    "source": "원 메이커"
+    "source": "원 메이커",
+    "companyStd": "Sungwoo Materials",
+    "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+    "latStd": "37.257356",
+    "lonStd": "127.052550",
+    "stdFilled": true
   },
   {
     "no": 100,
@@ -4249,10 +5112,15 @@ const MASTER = [
     "admin": "12: Busan",
     "addrEn": "동구 중앙대로 55, Busan 48821",
     "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-    "lat": "35.115034",
-    "lon": "129.041624",
+    "lat": "35.12",
+    "lon": "129.04",
     "modified": "2025-09-21",
-    "source": "Supply Tree"
+    "source": "Supply Tree",
+    "companyStd": "Daeyang Electronics",
+    "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+    "latStd": "35.115034",
+    "lonStd": "129.041624",
+    "stdFilled": true
   }
 ];
 
@@ -4269,22 +5137,34 @@ function avgClass(v) {
   return 'avg-lo';
 }
 
+// sub STD 셀: stdFilled(또는 표준화로 채운 _std 플래그) 이면 즉시 표시,
+// 아니면 data-val 에 보관해 두었다가 '표준화' 실행 시 채운다.
+function subStdCell(s, kind, val, extra) {
+  const v = esc(val);
+  const show = s.stdFilled || (s._std && s._std[kind]);
+  return `<td class="sub-cell std-cell${extra ? ' ' + extra : ''}" data-std="${kind}" data-val="${v}">${show ? v : ''}</td>`;
+}
+
 function rowHtml(r) {
   const s = r.sub, c = r.rec;
-  return `<tr>
+  return `<tr data-no="${r.no}">
     <td class="left-cell">${r.no}</td>
     <td class="left-cell"><input type="checkbox" class="chk row-chk"></td>
     <td class="left-cell"><span class="seg">DS</span></td>
     <td class="left-cell"><span class="status s-${esc(r.status)}">${esc(r.status)}</span></td>
 
     <td class="sub-cell">${esc(s.companyEn)}</td>
+    ${subStdCell(s, 'company', s.companyStd)}
     <td class="sub-cell">${esc(s.corpId)}</td>
     <td class="sub-cell">${esc(s.duns)}</td>
     <td class="sub-cell">${esc(s.country)}</td>
     <td class="sub-cell">${esc(s.admin)}</td>
     <td class="sub-cell addr">${esc(s.addr)}</td>
+    ${subStdCell(s, 'addr', s.addrStd, 'addr')}
     <td class="sub-cell simcol">${esc(s.lat)}</td>
+    ${subStdCell(s, 'lat', s.latStd, 'simcol')}
     <td class="sub-cell simcol">${esc(s.lon)}</td>
+    ${subStdCell(s, 'lon', s.lonStd, 'simcol')}
     <td class="sub-cell">${esc(s.partner)}</td>
     <td class="sub-cell">${esc(s.source)}</td>
 
@@ -4310,7 +5190,7 @@ function rowHtml(r) {
 
 function histRowHtml(r) {
   const s = r.sub;
-  return `<tr>
+  return `<tr data-no="${r.no}">
     <td class="left-cell">${r.no}</td>
     <td class="left-cell"><input type="checkbox" class="chk row-chk-h"></td>
     <td class="left-cell"><span class="seg">DS</span></td>
@@ -4318,13 +5198,17 @@ function histRowHtml(r) {
 
     <td class="sub-cell"><b>${esc(s.siteCode)}</b></td>
     <td class="sub-cell">${esc(s.companyEn)}</td>
+    ${subStdCell(s, 'company', s.companyStd)}
     <td class="sub-cell">${esc(s.corpId)}</td>
     <td class="sub-cell">${esc(s.duns)}</td>
     <td class="sub-cell">${esc(s.country)}</td>
     <td class="sub-cell">${esc(s.admin)}</td>
     <td class="sub-cell addr">${esc(s.addr)}</td>
+    ${subStdCell(s, 'addr', s.addrStd, 'addr')}
     <td class="sub-cell simcol">${esc(s.lat)}</td>
+    ${subStdCell(s, 'lat', s.latStd, 'simcol')}
     <td class="sub-cell simcol">${esc(s.lon)}</td>
+    ${subStdCell(s, 'lon', s.lonStd, 'simcol')}
     <td class="sub-cell">${esc(s.partner)}</td>
     <td class="sub-cell">${esc(s.source)}</td>
 
@@ -4644,6 +5528,7 @@ document.querySelectorAll('#page-verification .actions button').forEach(b => {
     const sel = currentTab === 'history' ? '.row-chk-h:checked' : '.row-chk:checked';
     const n = document.querySelectorAll(sel).length;
     if (b.dataset.act === '유사도 설정') { openSimModal(); return; }
+    if (b.dataset.act === '표준화') { openStdModal('verify'); return; }
     toast(`[${b.dataset.act}] — 데모 화면 (선택 ${n}건)`);
   });
 });
@@ -4665,13 +5550,21 @@ function srcCheck(source, col) {
 }
 
 function regRowHtml(r) {
-  return `<tr>
+  // STD 셀: 실제 표준값은 data-val 에 보관하고, 이미 표준화된(stdFilled) 행만
+  // 즉시 표시. 아니면 빈칸으로 두었다가 '표준화' 실행 시 채운다.
+  const stdCell = (kind, val, extra) => {
+    const v = esc(val);
+    const show = r.stdFilled || (r._std && r._std[kind]);
+    return `<td class="sub-cell std-cell${extra ? ' ' + extra : ''}" data-std="${kind}" data-val="${v}">${show ? v : ''}</td>`;
+  };
+  return `<tr data-no="${r.no}">
     <td class="left-cell">${r.no}</td>
     <td class="left-cell"><input type="checkbox" class="chk r-row-chk"></td>
     <td class="left-cell"><span class="status s-${esc(r.status)}">${esc(r.status)}</span></td>
     <td class="sub-cell"><b>${esc(r.siteCode)}</b></td>
     <td class="sub-cell">${esc(r.siteType)}</td>
     <td class="sub-cell">${esc(r.company)}</td>
+    ${stdCell('company', r.companyStd)}
     <td class="sub-cell">${esc(r.portCode)}</td>
     <td class="sub-cell">${esc(r.corpId)}</td>
     <td class="sub-cell">${esc(r.duns)}</td>
@@ -4679,8 +5572,11 @@ function regRowHtml(r) {
     <td class="sub-cell">${esc(r.admin)}</td>
     <td class="sub-cell addr">${esc(r.addrEn)}</td>
     <td class="sub-cell addr">${esc(r.addrLocal)}</td>
+    ${stdCell('addr', r.addrStd, 'addr')}
     <td class="sub-cell simcol">${esc(r.lat)}</td>
+    ${stdCell('lat', r.latStd, 'simcol')}
     <td class="sub-cell simcol">${esc(r.lon)}</td>
+    ${stdCell('lon', r.lonStd, 'simcol')}
     <td class="left-cell">${esc(r.modified)}</td>
     ${SRC_COLS.map(c => `<td class="sub-cell">${srcCheck(r.source, c)}</td>`).join('')}
   </tr>`;
@@ -4740,6 +5636,7 @@ $('#r-chk-all').addEventListener('change', (e) => {
 document.querySelectorAll('.reg-actionbar button').forEach(b => {
   b.addEventListener('click', () => {
     if (b.dataset.ract === '추가') { addRegRow(); return; }
+    if (b.dataset.ract === '표준화') { openStdModal('reg'); return; }
     const n = document.querySelectorAll('.r-row-chk:checked').length;
     toast(`[${b.dataset.ract}] — 데모 화면 (선택 ${n}건)`);
   });
@@ -4838,6 +5735,7 @@ function addRegRow() {
     <td class="sub-cell" data-f="siteCode"></td>
     <td class="sub-cell" data-f="siteType"></td>
     <td class="sub-cell"><div class="company-cell"><span data-f="company"></span><span class="zoom" title="글로벌 기업정보 검색">${REG_ZOOM_SVG}</span></div></td>
+    <td class="sub-cell std-cell" data-f="companyStd"></td>
     <td class="sub-cell" data-f="portCode"></td>
     <td class="sub-cell" data-f="corpId"></td>
     <td class="sub-cell" data-f="duns"></td>
@@ -4845,8 +5743,11 @@ function addRegRow() {
     <td class="sub-cell" data-f="admin"></td>
     <td class="sub-cell addr" data-f="addrEn"></td>
     <td class="sub-cell addr" data-f="addrLocal"></td>
+    <td class="sub-cell std-cell addr" data-f="addrStd"></td>
     <td class="sub-cell simcol" data-f="lat"></td>
+    <td class="sub-cell std-cell simcol" data-f="latStd"></td>
     <td class="sub-cell simcol" data-f="lon"></td>
+    <td class="sub-cell std-cell simcol" data-f="lonStd"></td>
     <td class="left-cell"></td>
     <td class="sub-cell"></td><td class="sub-cell"></td><td class="sub-cell"></td><td class="sub-cell"></td>
   </tr>`;
@@ -4867,6 +5768,110 @@ $('#r-tbody').addEventListener('click', (e) => {
   if (!z) return;
   openCorpSearch(z.closest('tr'));
 });
+
+// =====================================================================
+// 주소·업체명 표준화 (Site Registration / Site Code Verification 공용)
+// =====================================================================
+// 표준화 팝업은 현재 어느 화면에서 열렸는지(reg | verify) 기억하고,
+// 진행 시 대상 행들의 '빈 STD 셀'만 채운다. STD 정답값은 각 셀의 data-val
+// (Registration) 또는 각 tr 의 dataset(Verification 렌더 시 주입)에 보관돼 있다.
+let stdCtx = 'reg';
+
+function openStdModal(ctx) {
+  stdCtx = ctx;
+  // 대상 행 안내문: 체크된 행이 없으면 화면 전체 대상.
+  const sel = ctx === 'verify'
+    ? (currentTab === 'history' ? '.row-chk-h:checked' : '.row-chk:checked')
+    : '.r-row-chk:checked';
+  const n = document.querySelectorAll(sel).length;
+  $('#std-note').innerHTML = n === 0
+    ? '특정 행을 선택하지 않았습니다. 현재 화면에서 <b>전체 행</b>에 대해 표준화가 적용됩니다. 표준화 대상을 선택해주세요.'
+    : `선택한 <b>${n}건</b>에 대해 표준화가 적용됩니다.`;
+  // 대상 항목 토글 초기화(둘 다 선택)
+  document.querySelectorAll('#std-modal .ms-btn').forEach(b => b.classList.add('active'));
+  $('#std-modal').classList.add('show');
+}
+function closeStdModal() { $('#std-modal').classList.remove('show'); }
+
+$('#std-close').addEventListener('click', closeStdModal);
+$('#std-modal').addEventListener('click', (e) => { if (e.target === $('#std-modal')) closeStdModal(); });
+
+// 대상 항목(주소/업체명) 다중선택 토글 — 최소 1개는 유지
+document.querySelectorAll('#std-modal .ms-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const others = [...document.querySelectorAll('#std-modal .ms-btn')].filter(x => x !== b);
+    if (b.classList.contains('active') && !others.some(x => x.classList.contains('active'))) return;
+    b.classList.toggle('active');
+  });
+});
+
+$('#std-run').addEventListener('click', () => {
+  const kinds = [...document.querySelectorAll('#std-modal .ms-btn.active')].map(b => b.dataset.stdTarget);
+  const load = $('#std-loading');
+  load.classList.add('show');
+  // 결정적 로딩 지연(데모) 후 채움. Math.random/Date.now 미사용.
+  setTimeout(() => {
+    const filled = stdCtx === 'verify' ? runStdVerify(kinds) : runStdReg(kinds);
+    load.classList.remove('show');
+    closeStdModal();
+    toast(`표준화 완료 — ${filled}개 항목이 채워졌습니다.`);
+  }, 1200);
+});
+
+// STD 셀 채움 공통: 빈 STD 셀에 data-val 값을 표시하고, 정렬/필터 재렌더에도
+// 유지되도록 데이터 객체(obj)의 _std 플래그를 기록한다.
+function fillStdCell(cell, obj, kind) {
+  if (!cell || cell.textContent.trim() !== '') return false;  // 이미 채워졌으면 유지
+  const v = cell.dataset.val || '';
+  if (!v) return false;
+  cell.textContent = v;
+  cell.classList.add('just-filled');
+  if (obj) { (obj._std = obj._std || {})[kind] = true; }
+  return true;
+}
+
+// 주소 선택 시 lat/lon 도 함께 표준화되도록 종류 확장.
+function expandKinds(kinds) {
+  return kinds.includes('addr') ? [...kinds.filter(k => k !== 'addr'), 'addr', 'lat', 'lon'] : kinds;
+}
+
+// Registration 화면 표준화: 대상 행의 선택 종류별 STD 셀을 채운다.
+function runStdReg(kinds) {
+  const checked = [...document.querySelectorAll('#r-tbody .r-row-chk:checked')].map(c => c.closest('tr'));
+  const targets = checked.length ? checked : [...document.querySelectorAll('#r-tbody tr')];
+  const cellKinds = expandKinds(kinds);
+  let n = 0;
+  targets.forEach(tr => {
+    const no = Number(tr.dataset.no);
+    const obj = no ? MASTER.find(m => m.no === no) : null;  // 신규행은 data-no 없음 → DOM만
+    cellKinds.forEach(k => {
+      const cell = tr.querySelector(`td.std-cell[data-std="${k}"]`);
+      if (fillStdCell(cell, obj, k)) n++;
+    });
+  });
+  return n;
+}
+
+// Verification 화면 표준화: 현재 탭 테이블의 sub STD 셀을 채운다.
+function runStdVerify(kinds) {
+  const scope = currentTab === 'history' ? '#tbody-h' : '#tbody';
+  const chkSel = currentTab === 'history' ? '.row-chk-h:checked' : '.row-chk:checked';
+  const checked = [...document.querySelectorAll(`${scope} ${chkSel}`)].map(c => c.closest('tr'));
+  const targets = checked.length ? checked : [...document.querySelectorAll(`${scope} tr`)];
+  const cellKinds = expandKinds(kinds);
+  const rows = DATA[currentTab] || [];
+  let n = 0;
+  targets.forEach(tr => {
+    const no = Number(tr.dataset.no);
+    const rec = no ? rows.find(x => x.no === no) : null;
+    const obj = rec ? rec.sub : null;
+    cellKinds.forEach(k => {
+      const cell = tr.querySelector(`td.std-cell[data-std="${k}"]`);
+      if (fillStdCell(cell, obj, k)) n++;
+    });
+  });
+  return n;
+}
 
 // ---- Leaflet 지도 (CARTO 타일) ----
 // file:// 자체완결 목업이라 빌드 단계가 없어 NEXT_PUBLIC_* 주입이 불가 → 공개(클라이언트) 키를 인라인.
@@ -4936,7 +5941,8 @@ function openCorpSearch(tr) {
   corpTargetRow = tr;
   corpSelected = null;
   $('#c-name').value = ''; $('#c-duns').value = ''; $('#c-corp').value = '';
-  $('#c-addr').value = '';
+  $('#c-name-std').value = '';
+  $('#c-addr').value = ''; $('#c-addr-std').value = '';
   syncCorpDropdowns();
   $('#c-results').innerHTML = '<div class="corp-empty">검색 조건을 입력하고 검색을 눌러주세요.</div>';
   corpModal.classList.add('show');
@@ -4976,9 +5982,20 @@ $('#c-results').addEventListener('change', (e) => {
   const m = MASTER.find(x => x.no === Number(e.target.value));
   if (!m) return;
   corpSelected = m;
+  $('#c-name').value = m.company;
   $('#c-addr').value = m.addrEn;
   ensureCorpMap();
   corpSetPin(m.lat, m.lon);
+  // 업체명·입력된 주소(Eng)가 채워지면 잠시 로딩 후 표준화 값(업체명/주소) 자동 입력.
+  // (PoC 에서는 Google Geocoding API 로 표준화 값을 받아올 예정)
+  $('#c-name-std').value = ''; $('#c-addr-std').value = '';
+  const load = $('#c-loading');
+  load.classList.add('show');
+  setTimeout(() => {
+    $('#c-name-std').value = m.companyStd || m.company;
+    $('#c-addr-std').value = m.addrStd || m.addrEn;
+    load.classList.remove('show');
+  }, 900);
 });
 
 $('#corp-close').addEventListener('click', closeCorpSearch);
@@ -4995,6 +6012,11 @@ $('#corp-apply').addEventListener('click', () => {
     country: corpSelected.country, admin: corpSelected.admin,
     addrEn: corpSelected.addrEn, addrLocal: corpSelected.addrLocal || '',
     lat: corpSelected.lat, lon: corpSelected.lon,
+    // 등록 프로세스 상 표준화가 완료된 신규 행 → STD 컬럼 자동 채움
+    companyStd: corpSelected.companyStd || corpSelected.company,
+    addrStd: corpSelected.addrStd || corpSelected.addrEn,
+    latStd: corpSelected.latStd || corpSelected.lat,
+    lonStd: corpSelected.lonStd || corpSelected.lon,
   });
   closeCorpSearch();
   toast('신규 Site 정보가 적용되었습니다.');
@@ -5016,8 +6038,9 @@ function syncManualAdmin() {
 }
 
 function openManual() {
-  $('#m-name').value = ''; $('#m-corp').value = '';
+  $('#m-name').value = ''; $('#m-corp').value = ''; $('#m-name-std').value = '';
   $('#m-addr').value = ''; $('#m-lat').value = ''; $('#m-lon').value = '';
+  $('#m-addr-std').value = ''; $('#m-lat-std').value = ''; $('#m-lon-std').value = '';
   $('#m-addrsearch').value = '';
   $('#m-suggest').style.display = 'none';
   syncManualDropdowns();
@@ -5030,6 +6053,20 @@ $('#m-close').addEventListener('click', closeManual);
 manualModal.addEventListener('click', (e) => { if (e.target === manualModal) closeManual(); });
 $('#c-manual').addEventListener('click', openManual);
 $('#m-country').addEventListener('change', syncManualAdmin);
+
+// 수기 입력 업체명 표준화 — 접미사(불용어) 제거·공백 정리(결정적).
+// (PoC 에서는 LLM/기업정보 API 로 정규 업체명을 받아올 예정)
+const COMPANY_SUFFIXES = ['株式会社', '有限会社', '股份有限公司', '有限公司',
+  '주식회사', '유한회사', '(주)', '㈜', 'Co., Ltd.', 'Ltd.', 'LLC', 'Inc.', 'Corp.', 'GmbH', 'AG'];
+function standardizeCompany(name) {
+  let n = (name || '').trim();
+  for (const suf of COMPANY_SUFFIXES) n = n.split(suf).join(' ');
+  return n.replace(/\s+/g, ' ').trim();
+}
+$('#m-name').addEventListener('input', () => {
+  const raw = $('#m-name').value.trim();
+  $('#m-name-std').value = raw ? standardizeCompany(raw) : '';
+});
 
 // 주소 검색 — 국가/행정구역 선택 시 그 범위 내에서, 입력 텍스트 매칭이 상단
 $('#m-addrsearch').addEventListener('input', () => {
@@ -5065,6 +6102,17 @@ $('#m-suggest').addEventListener('click', (e) => {
   $('#m-suggest').style.display = 'none';
   ensureManMap();
   manSetPin(d.dataset.lat, d.dataset.lon);
+  // 주소/위도/경도가 채워지면 잠시 로딩 후 표준화 정보 자동 입력.
+  // (PoC 에서는 Google Geocoding API 로 표준화 값을 받아올 예정)
+  ['m-addr-std', 'm-lat-std', 'm-lon-std'].forEach(id => { $('#' + id).value = ''; });
+  const load = $('#m-loading');
+  load.classList.add('show');
+  setTimeout(() => {
+    $('#m-addr-std').value = d.textContent;
+    $('#m-lat-std').value = d.dataset.lat;
+    $('#m-lon-std').value = d.dataset.lon;
+    load.classList.remove('show');
+  }, 900);
 });
 
 $('#m-apply').addEventListener('click', () => {
@@ -5078,6 +6126,11 @@ $('#m-apply').addEventListener('click', () => {
     company: name, corpId: $('#m-corp').value.trim(), duns: '',
     country, admin, addrEn: $('#m-addr').value, addrLocal: '',
     lat: $('#m-lat').value, lon: $('#m-lon').value,
+    // 등록 프로세스 상 표준화가 완료된 신규 행 → STD 컬럼 자동 채움
+    companyStd: $('#m-name-std').value || name,
+    addrStd: $('#m-addr-std').value || $('#m-addr').value,
+    latStd: $('#m-lat-std').value || $('#m-lat').value,
+    lonStd: $('#m-lon-std').value || $('#m-lon').value,
   });
   closeManual();
   closeCorpSearch();

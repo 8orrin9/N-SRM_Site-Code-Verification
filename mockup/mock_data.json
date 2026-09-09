@@ -10,10 +10,15 @@
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "500 Nanjing Rd., Huangpu District, Shanghai, Shanghai 200001",
-        "lat": "31.235180",
-        "lon": "121.477500",
+        "lat": "31.24",
+        "lon": "121.48",
         "partner": "UM7K",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+        "latStd": "31.235180",
+        "lonStd": "121.477500",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S408382",
@@ -43,10 +48,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "福田区深南大道10000号, Shenzhen 518000",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "M56T",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S832753",
@@ -79,7 +89,12 @@
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "CSRO",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S260648",
@@ -109,10 +124,15 @@
         "country": "KR: 한국",
         "admin": "12: Busan",
         "addr": "120 Jungang-daero  Jung-gu  Busan  Busan 48943",
-        "lat": "35.106321",
-        "lon": "129.032630",
+        "lat": "35.11",
+        "lon": "129.03",
         "partner": "U67F",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Hanla Precision",
+        "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+        "latStd": "35.106321",
+        "lonStd": "129.032630",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S918778",
@@ -142,10 +162,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "苏州工业园区苏虹西路8号, Suzhou 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "D36I",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -178,7 +203,12 @@
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "Q99Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -208,10 +238,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyu@n Road, Nanshan District, Shenzhen, Guangdong 518057",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "UITU",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Zhongsheng Electronics",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S549561",
@@ -244,7 +279,12 @@
         "lat": "34.671870",
         "lon": "135.499750",
         "partner": "B8Y7",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sakura Denshi",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S609073",
@@ -274,10 +314,15 @@
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "墨田区押上1-1-2, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "LGRZ",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Nippon Seimitsu",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S471861",
@@ -307,10 +352,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Road  Suzhou Industrial Park  Suzhou  Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "UJ76",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S214803",
@@ -340,10 +390,15 @@
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "128 Yeoui-daero  Yeongdeungpo-gu  Seoul  Seoul 07320",
-        "lat": "37.525651",
-        "lon": "126.924191",
+        "lat": "37.53",
+        "lon": "126.92",
         "partner": "ZKQQ",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S448903",
@@ -376,7 +431,12 @@
         "lat": "37.422030",
         "lon": "-122.084000",
         "partner": "QFKA",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Summit Electronics",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S465433",
@@ -406,10 +466,15 @@
         "country": "US: 미국",
         "admin": "IL: Illinois",
         "addr": "875 N Michigan Ave., Chicago, Illinois 60611",
-        "lat": "41.898780",
-        "lon": "-87.623380",
+        "lat": "41.90",
+        "lon": "-87.62",
         "partner": "AILR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Lakeside Components",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S732752",
@@ -442,7 +507,12 @@
         "lat": "35.115034",
         "lon": "129.041624",
         "partner": "V2UK",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+        "latStd": "35.115034",
+        "lonStd": "129.041624",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S918778",
@@ -474,10 +544,15 @@
         "country": "CH: 스위스",
         "admin": "SG: St. Gallen",
         "addr": "Marktgasse 8, St. Gallen, St. Gallen 9004",
-        "lat": "47.425600",
-        "lon": "9.377180",
+        "lat": "47.43",
+        "lon": "9.38",
         "partner": "V8VR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Alpine Precision",
+        "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+        "latStd": "47.425600",
+        "lonStd": "9.377180",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S465433",
@@ -507,10 +582,15 @@
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "1-1-4 Meieki, Nakamura-ku, Nagoya",
-        "lat": "35.170920",
-        "lon": "136.881637",
+        "lat": "35.17",
+        "lon": "136.88",
         "partner": "YWT9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+        "latStd": "35.170920",
+        "lonStd": "136.881637",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S609073",
@@ -543,7 +623,12 @@
         "lat": "47.422780",
         "lon": "9.369870",
         "partner": "SEXJ",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Bavaria Technik",
+        "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+        "latStd": "47.422780",
+        "lonStd": "9.369870",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S004220",
@@ -576,7 +661,12 @@
         "lat": "37.257356",
         "lon": "127.052550",
         "partner": "QPEZ",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daeyang Electronics",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S970524",
@@ -606,10 +696,15 @@
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
-        "lat": "35.168060",
-        "lon": "136.908390",
+        "lat": "35.17",
+        "lon": "136.91",
         "partner": "G4Q4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S471861",
@@ -639,10 +734,15 @@
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S572920",
@@ -675,7 +775,12 @@
         "lat": "35.168060",
         "lon": "136.908390",
         "partner": "UOPF",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Fuji Handotai",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S931575",
@@ -705,10 +810,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyuan Road, Nanshan District, Shenzhen",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "TADT",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S796334",
@@ -738,10 +848,15 @@
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "중구 을지로 26, Seoul 04539",
-        "lat": "37.566010",
-        "lon": "126.982877",
+        "lat": "37.57",
+        "lon": "126.98",
         "partner": "D7DQ",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Hanla Precision",
+        "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+        "latStd": "37.566010",
+        "lonStd": "126.982877",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S185946",
@@ -771,10 +886,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "TWIG",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S549561",
@@ -807,7 +927,12 @@
         "lat": "31.235180",
         "lon": "121.477500",
         "partner": "CAZQ",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinlong Semiconductor",
+        "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+        "latStd": "31.235180",
+        "lonStd": "121.477500",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S641860",
@@ -837,10 +962,15 @@
         "country": "KR: 한국",
         "admin": "13: Seoul",
         "addr": "Seoul, Seoul",
-        "lat": "37.525651",
-        "lon": "126.924191",
+        "lat": "37.53",
+        "lon": "126.92",
         "partner": "KSGR",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S607790",
@@ -873,7 +1003,12 @@
         "lat": "37.566295",
         "lon": "126.976889",
         "partner": "HF06",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+        "latStd": "37.566295",
+        "lonStd": "126.976889",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S918778",
@@ -906,7 +1041,12 @@
         "lat": "37.525651",
         "lon": "126.924191",
         "partner": "ZIK4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Nexen Components",
+        "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+        "latStd": "37.525651",
+        "lonStd": "126.924191",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S929628",
@@ -938,10 +1078,15 @@
         "country": "US: 미국",
         "admin": "CA: California",
         "addr": "1600 Amphitheatre Parkway, Mountain View",
-        "lat": "37.422030",
-        "lon": "-122.084000",
+        "lat": "37.42",
+        "lon": "-122.08",
         "partner": "MLG4",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Alpine Precision",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S409084",
@@ -971,10 +1116,15 @@
         "country": "JP: 일본",
         "admin": "27: Osaka",
         "addr": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
-        "lat": "34.671870",
-        "lon": "135.499750",
+        "lat": "34.67",
+        "lon": "135.50",
         "partner": "ESN2",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S548047",
@@ -1004,10 +1154,15 @@
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
-        "lat": "35.676190",
-        "lon": "139.744730",
+        "lat": "35.68",
+        "lon": "139.74",
         "partner": "RR6A",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Asahi Components",
+        "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+        "latStd": "35.676190",
+        "lonStd": "139.744730",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S483115",
@@ -1037,10 +1192,15 @@
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "NNEU",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Asahi Components",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S943378",
@@ -1073,7 +1233,12 @@
         "lat": "37.566010",
         "lon": "126.982877",
         "partner": "C178",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Daeyang Electronics",
+        "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+        "latStd": "37.566010",
+        "lonStd": "126.982877",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S620667",
@@ -1103,10 +1268,15 @@
         "country": "JP: 일본",
         "admin": "23: Aichi",
         "addr": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
-        "lat": "35.168060",
-        "lon": "136.908390",
+        "lat": "35.17",
+        "lon": "136.91",
         "partner": "G4Q4",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+        "latStd": "35.168060",
+        "lonStd": "136.908390",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S755557",
@@ -1136,10 +1306,15 @@
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "QW2Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Daiwa Electronics",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S542644",
@@ -1169,10 +1344,15 @@
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S551271",
@@ -1202,10 +1382,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "LVF9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S541458",
@@ -1238,7 +1423,12 @@
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "J8AR",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S562789",
@@ -1271,7 +1461,12 @@
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "SI5C",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Hanla Precision",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S781909",
@@ -1304,7 +1499,12 @@
         "lat": "22.543611",
         "lon": "114.056880",
         "partner": "DE4I",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S698303",
@@ -1334,10 +1534,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "TWIG",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "rec": {
         "siteCode": "S135868",
@@ -1370,7 +1575,12 @@
         "lat": "31.233705",
         "lon": "121.524621",
         "partner": "AWFD",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Jinlong Semiconductor",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": false
       },
       "rec": {
         "siteCode": "S507472",
@@ -1403,10 +1613,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "1 Keyuan Road, Nanshan District, Shenzhen",
-        "lat": "22.537300",
-        "lon": "113.947700",
+        "lat": "22.54",
+        "lon": "113.95",
         "partner": "TADT",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+        "latStd": "22.537300",
+        "lonStd": "113.947700",
+        "stdFilled": true
       },
       "modified": "2025-12-25"
     },
@@ -1421,10 +1636,15 @@
         "country": "JP: 일본",
         "admin": "13: Tokyo",
         "addr": "墨田区押上1-1-2, Tokyo 131-0045",
-        "lat": "35.710060",
-        "lon": "139.810700",
+        "lat": "35.71",
+        "lon": "139.81",
         "partner": "N6KC",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Nippon Seimitsu",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
       },
       "modified": "2024-11-10"
     },
@@ -1439,10 +1659,15 @@
         "country": "US: 미국",
         "admin": "IL: Illinois",
         "addr": "875 N Michigan Avenue, Chicago",
-        "lat": "41.898780",
-        "lon": "-87.623380",
+        "lat": "41.90",
+        "lon": "-87.62",
         "partner": "PICD",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Summit Electronics",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
       },
       "modified": "2025-02-25"
     },
@@ -1457,10 +1682,15 @@
         "country": "KR: 한국",
         "admin": "09: Gyeonggi-do",
         "addr": "1 Samsung-ro, Yeongtong-gu, Suwon",
-        "lat": "37.257356",
-        "lon": "127.052550",
+        "lat": "37.26",
+        "lon": "127.05",
         "partner": "KMQR",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": true
       },
       "modified": "2024-07-17"
     },
@@ -1475,10 +1705,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "福田区深南大道10000号, Shenzhen 518000",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "M56T",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Huaxin Technology",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "modified": "2024-02-26"
     },
@@ -1496,7 +1731,12 @@
         "lat": "37.287280",
         "lon": "127.046370",
         "partner": "CSRO",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Jinwoo Semiconductor",
+        "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+        "latStd": "37.287280",
+        "lonStd": "127.046370",
+        "stdFilled": true
       },
       "modified": "2026-09-07"
     },
@@ -1511,10 +1751,15 @@
         "country": "US: 미국",
         "admin": "CA: California",
         "addr": "1600 Amphitheatre Parkway, Mountain View",
-        "lat": "37.422030",
-        "lon": "-122.084000",
+        "lat": "37.42",
+        "lon": "-122.08",
         "partner": "MLG4",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Alpine Precision",
+        "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+        "latStd": "37.422030",
+        "lonStd": "-122.084000",
+        "stdFilled": true
       },
       "modified": "2025-10-23"
     },
@@ -1529,10 +1774,15 @@
         "country": "CN: 중국",
         "admin": "440: Guangdong",
         "addr": "10000 Shennan Avenue, Futian District, Shenzhen",
-        "lat": "22.543611",
-        "lon": "114.056880",
+        "lat": "22.54",
+        "lon": "114.06",
         "partner": "QC3R",
-        "source": "Factory Information"
+        "source": "Factory Information",
+        "companyStd": "Zhongsheng Electronics",
+        "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+        "latStd": "22.543611",
+        "lonStd": "114.056880",
+        "stdFilled": true
       },
       "modified": "2026-03-14"
     },
@@ -1550,7 +1800,12 @@
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "J8AR",
-        "source": "Supply Tree"
+        "source": "Supply Tree",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2026-08-01"
     },
@@ -1568,7 +1823,12 @@
         "lat": "37.566295",
         "lon": "126.976889",
         "partner": "AQ9B",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sungwoo Materials",
+        "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+        "latStd": "37.566295",
+        "lonStd": "126.976889",
+        "stdFilled": true
       },
       "modified": "2026-02-13"
     },
@@ -1586,7 +1846,12 @@
         "lat": "31.315610",
         "lon": "120.686340",
         "partner": "Q99Q",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Haiyuan Components",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2025-09-05"
     },
@@ -1601,10 +1866,15 @@
         "country": "CN: 중국",
         "admin": "100: Jiangsu",
         "addr": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
-        "lat": "31.315610",
-        "lon": "120.686340",
+        "lat": "31.32",
+        "lon": "120.69",
         "partner": "LVF9",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+        "latStd": "31.315610",
+        "lonStd": "120.686340",
+        "stdFilled": true
       },
       "modified": "2024-01-24"
     },
@@ -1622,7 +1892,12 @@
         "lat": "34.671870",
         "lon": "135.499750",
         "partner": "B8Y7",
-        "source": "원 메이커"
+        "source": "원 메이커",
+        "companyStd": "Sakura Denshi",
+        "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+        "latStd": "34.671870",
+        "lonStd": "135.499750",
+        "stdFilled": true
       },
       "modified": "2026-07-22"
     },
@@ -1637,10 +1912,15 @@
         "country": "CN: 중국",
         "admin": "020: Shanghai",
         "addr": "1000 Century Avenue, Pudong New District, Shanghai",
-        "lat": "31.233705",
-        "lon": "121.524621",
+        "lat": "31.23",
+        "lon": "121.52",
         "partner": "O7PN",
-        "source": "협력사등록"
+        "source": "협력사등록",
+        "companyStd": "Dongfang Precision",
+        "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+        "latStd": "31.233705",
+        "lonStd": "121.524621",
+        "stdFilled": true
       },
       "modified": "2025-07-03"
     }
@@ -1659,10 +1939,15 @@
       "admin": "13: Seoul",
       "addrEn": "중구 을지로 26, Seoul 04539",
       "addrLocal": "서울특별시 중구 을지로 26 (04539)",
-      "lat": "37.566010",
-      "lon": "126.982877",
+      "lat": "37.57",
+      "lon": "126.98",
       "modified": "2026-02-11",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Hanla Precision",
+      "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+      "latStd": "37.566010",
+      "lonStd": "126.982877",
+      "stdFilled": false
     },
     {
       "no": 2,
@@ -1677,10 +1962,15 @@
       "admin": "13: Tokyo",
       "addrEn": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
       "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-      "lat": "35.676190",
-      "lon": "139.744730",
+      "lat": "35.68",
+      "lon": "139.74",
       "modified": "2026-06-09",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": false
     },
     {
       "no": 3,
@@ -1698,7 +1988,12 @@
       "lat": "22.543611",
       "lon": "114.056880",
       "modified": "2026-06-07",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+      "latStd": "22.543611",
+      "lonStd": "114.056880",
+      "stdFilled": true
     },
     {
       "no": 4,
@@ -1713,10 +2008,15 @@
       "admin": "12: Busan",
       "addrEn": "55 Jung@ng-daero, Dong-gu, Busan, Busan 48821",
       "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-      "lat": "35.115034",
-      "lon": "129.041624",
+      "lat": "35.12",
+      "lon": "129.04",
       "modified": "2025-03-08",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": false
     },
     {
       "no": 5,
@@ -1731,10 +2031,15 @@
       "admin": "440: Guangdong",
       "addrEn": "1 Keyuan Road, Nanshan District, Shenzhen",
       "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-      "lat": "22.537300",
-      "lon": "113.947700",
+      "lat": "22.54",
+      "lon": "113.95",
       "modified": "2025-12-25",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+      "latStd": "22.537300",
+      "lonStd": "113.947700",
+      "stdFilled": true
     },
     {
       "no": 6,
@@ -1749,10 +2054,15 @@
       "admin": "13: Tokyo",
       "addrEn": "墨田区押上1-1-2, Tokyo 131-0045",
       "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-      "lat": "35.710060",
-      "lon": "139.810700",
+      "lat": "35.71",
+      "lon": "139.81",
       "modified": "2024-11-10",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 7,
@@ -1770,7 +2080,12 @@
       "lat": "37.566295",
       "lon": "126.976889",
       "modified": "2026-08-15",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+      "latStd": "37.566295",
+      "lonStd": "126.976889",
+      "stdFilled": false
     },
     {
       "no": 8,
@@ -1785,10 +2100,15 @@
       "admin": "13: Seoul",
       "addrEn": "Seoul, Seoul",
       "addrLocal": "서울특별시 영등포구 여의대로 128 (07320)",
-      "lat": "37.525651",
-      "lon": "126.924191",
+      "lat": "37.53",
+      "lon": "126.92",
       "modified": "2024-09-17",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Jinwoo Semiconductor",
+      "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+      "latStd": "37.525651",
+      "lonStd": "126.924191",
+      "stdFilled": false
     },
     {
       "no": 9,
@@ -1806,7 +2126,12 @@
       "lat": "35.170920",
       "lon": "136.881637",
       "modified": "2026-04-22",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Toyo Materials",
+      "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+      "latStd": "35.170920",
+      "lonStd": "136.881637",
+      "stdFilled": true
     },
     {
       "no": 10,
@@ -1821,10 +2146,15 @@
       "admin": "23: Aichi",
       "addrEn": "1-1-4 Meieki, Nakamura-ku, Nagoya",
       "addrLocal": "450-0002 愛知県名古屋市中村区名駅1-1-4",
-      "lat": "35.170920",
-      "lon": "136.881637",
+      "lat": "35.17",
+      "lon": "136.88",
       "modified": "2025-10-05",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Asahi Components",
+      "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+      "latStd": "35.170920",
+      "lonStd": "136.881637",
+      "stdFilled": false
     },
     {
       "no": 11,
@@ -1839,10 +2169,15 @@
       "admin": "IL: Illinois",
       "addrEn": "875 N Michigan Avenue, Chicago",
       "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-      "lat": "41.898780",
-      "lon": "-87.623380",
+      "lat": "41.90",
+      "lon": "-87.62",
       "modified": "2025-02-25",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Summit Electronics",
+      "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+      "latStd": "41.898780",
+      "lonStd": "-87.623380",
+      "stdFilled": true
     },
     {
       "no": 12,
@@ -1857,10 +2192,15 @@
       "admin": "12: Busan",
       "addrEn": "120 Jungang-daero, Jung-gu, Busan",
       "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-      "lat": "35.106321",
-      "lon": "129.032630",
+      "lat": "35.11",
+      "lon": "129.03",
       "modified": "2026-08-26",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+      "latStd": "35.106321",
+      "lonStd": "129.032630",
+      "stdFilled": true
     },
     {
       "no": 13,
@@ -1875,10 +2215,15 @@
       "admin": "09: Gyeonggi-do",
       "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
       "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-      "lat": "37.257356",
-      "lon": "127.052550",
+      "lat": "37.26",
+      "lon": "127.05",
       "modified": "2024-07-17",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+      "latStd": "37.257356",
+      "lonStd": "127.052550",
+      "stdFilled": true
     },
     {
       "no": 14,
@@ -1893,10 +2238,15 @@
       "admin": "020: Shanghai",
       "addrEn": "500 Nanjing Rd., Huangpu District, Shanghai, Shanghai 200001",
       "addrLocal": "上海市黄浦区南京路500号 200001",
-      "lat": "31.235180",
-      "lon": "121.477500",
+      "lat": "31.24",
+      "lon": "121.48",
       "modified": "2026-06-05",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+      "latStd": "31.235180",
+      "lonStd": "121.477500",
+      "stdFilled": false
     },
     {
       "no": 15,
@@ -1911,10 +2261,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
       "addrLocal": "江苏省苏州市星海街200号 215028",
-      "lat": "31.322450",
-      "lon": "120.717800",
+      "lat": "31.32",
+      "lon": "120.72",
       "modified": "2026-09-08",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Zhongsheng Electronics",
+      "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+      "latStd": "31.322450",
+      "lonStd": "120.717800",
+      "stdFilled": true
     },
     {
       "no": 16,
@@ -1929,10 +2284,15 @@
       "admin": "440: Guangdong",
       "addrEn": "福田区深南大道10000号, Shenzhen 518000",
       "addrLocal": "广东省深圳市福田区深南大道10000号 518000",
-      "lat": "22.543611",
-      "lon": "114.056880",
+      "lat": "22.54",
+      "lon": "114.06",
       "modified": "2024-02-26",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+      "latStd": "22.543611",
+      "lonStd": "114.056880",
+      "stdFilled": true
     },
     {
       "no": 17,
@@ -1950,7 +2310,12 @@
       "lat": "37.287280",
       "lon": "127.046370",
       "modified": "2026-09-07",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Jinwoo Semiconductor",
+      "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+      "latStd": "37.287280",
+      "lonStd": "127.046370",
+      "stdFilled": true
     },
     {
       "no": 18,
@@ -1968,7 +2333,12 @@
       "lat": "34.671870",
       "lon": "135.499750",
       "modified": "2025-05-14",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Sakura Denshi",
+      "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+      "latStd": "34.671870",
+      "lonStd": "135.499750",
+      "stdFilled": true
     },
     {
       "no": 19,
@@ -1983,10 +2353,15 @@
       "admin": "CA: California",
       "addrEn": "1600 Amphitheatre Parkway, Mountain View",
       "addrLocal": "1600 Amphitheatre Parkway, 94043 Mountain View",
-      "lat": "37.422030",
-      "lon": "-122.084000",
+      "lat": "37.42",
+      "lon": "-122.08",
       "modified": "2025-10-23",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Alpine Precision",
+      "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+      "latStd": "37.422030",
+      "lonStd": "-122.084000",
+      "stdFilled": true
     },
     {
       "no": 20,
@@ -2001,10 +2376,15 @@
       "admin": "440: Guangdong",
       "addrEn": "10000 Shennan Avenue, Futian District, Shenzhen",
       "addrLocal": "广东省深圳市福田区深南大道10000号 518000",
-      "lat": "22.543611",
-      "lon": "114.056880",
+      "lat": "22.54",
+      "lon": "114.06",
       "modified": "2026-03-14",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Zhongsheng Electronics",
+      "addrStd": "10000 Shennan Avenue, Futian District, Shenzhen, Guangdong 518000",
+      "latStd": "22.543611",
+      "lonStd": "114.056880",
+      "stdFilled": true
     },
     {
       "no": 21,
@@ -2022,7 +2402,12 @@
       "lat": "35.115034",
       "lon": "129.041624",
       "modified": "2025-02-04",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": true
     },
     {
       "no": 22,
@@ -2040,7 +2425,12 @@
       "lat": "31.315610",
       "lon": "120.686340",
       "modified": "2026-08-01",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 23,
@@ -2055,10 +2445,15 @@
       "admin": "12: Busan",
       "addrEn": "120 Jungang-daero  Jung-gu  Busan  Busan 48943",
       "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-      "lat": "35.106321",
-      "lon": "129.032630",
+      "lat": "35.11",
+      "lon": "129.03",
       "modified": "2024-10-16",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Hanla Precision",
+      "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+      "latStd": "35.106321",
+      "lonStd": "129.032630",
+      "stdFilled": false
     },
     {
       "no": 24,
@@ -2073,10 +2468,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "苏州工业园区苏虹西路8号, Suzhou 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2026-01-08",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 25,
@@ -2091,10 +2491,15 @@
       "admin": "13: Tokyo",
       "addrEn": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
       "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-      "lat": "35.710060",
-      "lon": "139.810700",
+      "lat": "35.71",
+      "lon": "139.81",
       "modified": "2024-11-22",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Daiwa Electronics",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": false
     },
     {
       "no": 26,
@@ -2112,7 +2517,12 @@
       "lat": "37.566295",
       "lon": "126.976889",
       "modified": "2026-02-13",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+      "latStd": "37.566295",
+      "lonStd": "126.976889",
+      "stdFilled": true
     },
     {
       "no": 27,
@@ -2127,10 +2537,15 @@
       "admin": "CA: California",
       "addrEn": "1600 Amphitheatre Parkway, Mountain View 94043",
       "addrLocal": "1600 Amphitheatre Parkway, 94043 Mountain View",
-      "lat": "37.422030",
-      "lon": "-122.084000",
+      "lat": "37.42",
+      "lon": "-122.08",
       "modified": "2025-11-08",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Summit Electronics",
+      "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+      "latStd": "37.422030",
+      "lonStd": "-122.084000",
+      "stdFilled": true
     },
     {
       "no": 28,
@@ -2148,7 +2563,12 @@
       "lat": "31.315610",
       "lon": "120.686340",
       "modified": "2025-09-05",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 29,
@@ -2166,7 +2586,12 @@
       "lat": "35.168060",
       "lon": "136.908390",
       "modified": "2025-12-23",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Fuji Handotai",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": false
     },
     {
       "no": 30,
@@ -2181,10 +2606,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2024-01-24",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Dongfang Precision",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 31,
@@ -2199,10 +2629,15 @@
       "admin": "440: Guangdong",
       "addrEn": "1 Keyu@n Road, Nanshan District, Shenzhen, Guangdong 518057",
       "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-      "lat": "22.537300",
-      "lon": "113.947700",
+      "lat": "22.54",
+      "lon": "113.95",
       "modified": "2024-01-17",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Zhongsheng Electronics",
+      "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+      "latStd": "22.537300",
+      "lonStd": "113.947700",
+      "stdFilled": false
     },
     {
       "no": 32,
@@ -2220,7 +2655,12 @@
       "lat": "34.671870",
       "lon": "135.499750",
       "modified": "2026-07-22",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Sakura Denshi",
+      "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+      "latStd": "34.671870",
+      "lonStd": "135.499750",
+      "stdFilled": true
     },
     {
       "no": 33,
@@ -2235,10 +2675,15 @@
       "admin": "13: Tokyo",
       "addrEn": "墨田区押上1-1-2, Tokyo 131-0045",
       "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-      "lat": "35.710060",
-      "lon": "139.810700",
+      "lat": "35.71",
+      "lon": "139.81",
       "modified": "2026-06-10",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 34,
@@ -2253,10 +2698,15 @@
       "admin": "020: Shanghai",
       "addrEn": "1000 Century Avenue, Pudong New District, Shanghai",
       "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-      "lat": "31.233705",
-      "lon": "121.524621",
+      "lat": "31.23",
+      "lon": "121.52",
       "modified": "2025-07-03",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Dongfang Precision",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": true
     },
     {
       "no": 35,
@@ -2274,7 +2724,12 @@
       "lat": "37.287280",
       "lon": "127.046370",
       "modified": "2024-07-09",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Hanla Precision",
+      "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+      "latStd": "37.287280",
+      "lonStd": "127.046370",
+      "stdFilled": false
     },
     {
       "no": 36,
@@ -2289,10 +2744,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "8 Suhong West Road  Suzhou Industrial Park  Suzhou  Jiangsu 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2026-06-26",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 37,
@@ -2307,10 +2767,15 @@
       "admin": "BY: Bavaria",
       "addrEn": "Marienplatz 8  Munich  Bavaria 80331",
       "addrLocal": "Marienplatz 8, 80331 München",
-      "lat": "48.137150",
-      "lon": "11.575490",
+      "lat": "48.14",
+      "lon": "11.58",
       "modified": "2025-08-26",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Rheinland Materials",
+      "addrStd": "Marienplatz 8, Munich, Bavaria 80331",
+      "latStd": "48.137150",
+      "lonStd": "11.575490",
+      "stdFilled": true
     },
     {
       "no": 38,
@@ -2325,10 +2790,15 @@
       "admin": "13: Seoul",
       "addrEn": "128 Yeoui-daero  Yeongdeungpo-gu  Seoul  Seoul 07320",
       "addrLocal": "서울특별시 영등포구 여의대로 128 (07320)",
-      "lat": "37.525651",
-      "lon": "126.924191",
+      "lat": "37.53",
+      "lon": "126.92",
       "modified": "2026-03-06",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+      "latStd": "37.525651",
+      "lonStd": "126.924191",
+      "stdFilled": true
     },
     {
       "no": 39,
@@ -2343,10 +2813,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2025-03-27",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 40,
@@ -2364,7 +2839,12 @@
       "lat": "37.422030",
       "lon": "-122.084000",
       "modified": "2025-07-15",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Summit Electronics",
+      "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+      "latStd": "37.422030",
+      "lonStd": "-122.084000",
+      "stdFilled": false
     },
     {
       "no": 41,
@@ -2379,10 +2859,15 @@
       "admin": "IL: Illinois",
       "addrEn": "875 N Michigan Ave., Chicago, Illinois 60611",
       "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-      "lat": "41.898780",
-      "lon": "-87.623380",
+      "lat": "41.90",
+      "lon": "-87.62",
       "modified": "2025-08-13",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Lakeside Components",
+      "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+      "latStd": "41.898780",
+      "lonStd": "-87.623380",
+      "stdFilled": true
     },
     {
       "no": 42,
@@ -2400,7 +2885,12 @@
       "lat": "35.115034",
       "lon": "129.041624",
       "modified": "2025-04-12",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": true
     },
     {
       "no": 43,
@@ -2415,10 +2905,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
       "addrLocal": "江苏省苏州市星海街200号 215028",
-      "lat": "31.322450",
-      "lon": "120.717800",
+      "lat": "31.32",
+      "lon": "120.72",
       "modified": "2026-09-01",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+      "latStd": "31.322450",
+      "lonStd": "120.717800",
+      "stdFilled": true
     },
     {
       "no": 44,
@@ -2436,7 +2931,12 @@
       "lat": "31.233705",
       "lon": "121.524621",
       "modified": "2024-06-12",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Jinlong Semiconductor",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": false
     },
     {
       "no": 45,
@@ -2454,7 +2954,12 @@
       "lat": "35.710060",
       "lon": "139.810700",
       "modified": "2025-03-10",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Sakura Denshi",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 46,
@@ -2472,7 +2977,12 @@
       "lat": "37.566010",
       "lon": "126.982877",
       "modified": "2025-01-24",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Daeyang Electronics",
+      "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+      "latStd": "37.566010",
+      "lonStd": "126.982877",
+      "stdFilled": true
     },
     {
       "no": 47,
@@ -2487,10 +2997,15 @@
       "admin": "27: Osaka",
       "addrEn": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
       "addrLocal": "542-0086 大阪府中央区西心斎橋2-1-33",
-      "lat": "34.671870",
-      "lon": "135.499750",
+      "lat": "34.67",
+      "lon": "135.50",
       "modified": "2024-02-28",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Asahi Components",
+      "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+      "latStd": "34.671870",
+      "lonStd": "135.499750",
+      "stdFilled": true
     },
     {
       "no": 48,
@@ -2505,10 +3020,15 @@
       "admin": "13: Tokyo",
       "addrEn": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo",
       "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-      "lat": "35.676190",
-      "lon": "139.744730",
+      "lat": "35.68",
+      "lon": "139.74",
       "modified": "2026-06-27",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Asahi Components",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": true
     },
     {
       "no": 49,
@@ -2523,10 +3043,15 @@
       "admin": "23: Aichi",
       "addrEn": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
       "addrLocal": "460-0008 愛知県名古屋市中区栄3-1-1",
-      "lat": "35.168060",
-      "lon": "136.908390",
+      "lat": "35.17",
+      "lon": "136.91",
       "modified": "2025-04-19",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Asahi Components",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": true
     },
     {
       "no": 50,
@@ -2544,7 +3069,12 @@
       "lat": "35.676190",
       "lon": "139.744730",
       "modified": "2025-11-12",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Sakura Denshi",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": false
     },
     {
       "no": 51,
@@ -2562,7 +3092,12 @@
       "lat": "37.525651",
       "lon": "126.924191",
       "modified": "2026-05-21",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Nexen Components",
+      "addrStd": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul, Seoul 07320",
+      "latStd": "37.525651",
+      "lonStd": "126.924191",
+      "stdFilled": true
     },
     {
       "no": 52,
@@ -2577,10 +3112,15 @@
       "admin": "13: Tokyo",
       "addrEn": "2-11-1 Nagatacho  Chiyoda-ku  Tokyo  Tokyo 100-0014",
       "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-      "lat": "35.676190",
-      "lon": "139.744730",
+      "lat": "35.68",
+      "lon": "139.74",
       "modified": "2026-04-07",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": false
     },
     {
       "no": 53,
@@ -2595,10 +3135,15 @@
       "admin": "SG: St. Gallen",
       "addrEn": "Marktgasse 8, St. Gallen, St. Gallen 9004",
       "addrLocal": "Marktgasse 8, 9004 St. Gallen",
-      "lat": "47.425600",
-      "lon": "9.377180",
+      "lat": "47.43",
+      "lon": "9.38",
       "modified": "2025-10-19",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Alpine Precision",
+      "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+      "latStd": "47.425600",
+      "lonStd": "9.377180",
+      "stdFilled": true
     },
     {
       "no": 54,
@@ -2613,10 +3158,15 @@
       "admin": "23: Aichi",
       "addrEn": "3-1-1 S@kae, Naka-ku, Nagoya, Aichi 460-0008",
       "addrLocal": "460-0008 愛知県名古屋市中区栄3-1-1",
-      "lat": "35.168060",
-      "lon": "136.908390",
+      "lat": "35.17",
+      "lon": "136.91",
       "modified": "2025-08-15",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Daiwa Electronics",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": true
     },
     {
       "no": 55,
@@ -2631,10 +3181,15 @@
       "admin": "440: Guangdong",
       "addrEn": "Shenzhen, Guangdong",
       "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-      "lat": "22.537300",
-      "lon": "113.947700",
+      "lat": "22.54",
+      "lon": "113.95",
       "modified": "2024-11-14",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+      "latStd": "22.537300",
+      "lonStd": "113.947700",
+      "stdFilled": true
     },
     {
       "no": 56,
@@ -2652,7 +3207,12 @@
       "lat": "35.168060",
       "lon": "136.908390",
       "modified": "2025-03-02",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": false
     },
     {
       "no": 57,
@@ -2670,7 +3230,12 @@
       "lat": "31.315610",
       "lon": "120.686340",
       "modified": "2026-01-19",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Dongfang Precision",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 58,
@@ -2685,10 +3250,15 @@
       "admin": "020: Shanghai",
       "addrEn": "1000 Century Avenue, Pudong New District, Shanghai",
       "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-      "lat": "31.233705",
-      "lon": "121.524621",
+      "lat": "31.23",
+      "lon": "121.52",
       "modified": "2025-08-10",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Dongfang Precision",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": false
     },
     {
       "no": 59,
@@ -2706,7 +3276,12 @@
       "lat": "35.170920",
       "lon": "136.881637",
       "modified": "2025-12-06",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Fuji Handotai",
+      "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+      "latStd": "35.170920",
+      "lonStd": "136.881637",
+      "stdFilled": false
     },
     {
       "no": 60,
@@ -2721,10 +3296,15 @@
       "admin": "13: Tokyo",
       "addrEn": "千代田区永田町2-11-1, Tokyo 100-0014",
       "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-      "lat": "35.676190",
-      "lon": "139.744730",
+      "lat": "35.68",
+      "lon": "139.74",
       "modified": "2026-07-28",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Asahi Components",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": true
     },
     {
       "no": 61,
@@ -2742,7 +3322,12 @@
       "lat": "47.425600",
       "lon": "9.377180",
       "modified": "2025-08-08",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Summit Electronics",
+      "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+      "latStd": "47.425600",
+      "lonStd": "9.377180",
+      "stdFilled": true
     },
     {
       "no": 62,
@@ -2757,10 +3342,15 @@
       "admin": "020: Shanghai",
       "addrEn": "Shanghai, Shanghai",
       "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-      "lat": "31.233705",
-      "lon": "121.524621",
+      "lat": "31.23",
+      "lon": "121.52",
       "modified": "2025-05-10",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Zhongsheng Electronics",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": true
     },
     {
       "no": 63,
@@ -2778,7 +3368,12 @@
       "lat": "35.168060",
       "lon": "136.908390",
       "modified": "2025-12-27",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Daiwa Electronics",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": true
     },
     {
       "no": 64,
@@ -2793,10 +3388,15 @@
       "admin": "440: Guangdong",
       "addrEn": "Shenzhen, Guangdong",
       "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-      "lat": "22.537300",
-      "lon": "113.947700",
+      "lat": "22.54",
+      "lon": "113.95",
       "modified": "2025-12-04",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Ruifeng Materials",
+      "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+      "latStd": "22.537300",
+      "lonStd": "113.947700",
+      "stdFilled": true
     },
     {
       "no": 65,
@@ -2811,10 +3411,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "Suzhou, Jiangsu",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2024-03-07",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Ruifeng Materials",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 66,
@@ -2832,7 +3437,12 @@
       "lat": "34.671870",
       "lon": "135.499750",
       "modified": "2026-05-07",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Asahi Components",
+      "addrStd": "2-1-33 Nishishinsaibashi, Chuo-ku, Osaka, Osaka 542-0086",
+      "latStd": "34.671870",
+      "lonStd": "135.499750",
+      "stdFilled": true
     },
     {
       "no": 67,
@@ -2847,10 +3457,15 @@
       "admin": "13: Seoul",
       "addrEn": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
       "addrLocal": "서울특별시 중구 세종대로 14 (04524)",
-      "lat": "37.566295",
-      "lon": "126.976889",
+      "lat": "37.57",
+      "lon": "126.98",
       "modified": "2025-06-25",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+      "latStd": "37.566295",
+      "lonStd": "126.976889",
+      "stdFilled": true
     },
     {
       "no": 68,
@@ -2868,7 +3483,12 @@
       "lat": "37.257356",
       "lon": "127.052550",
       "modified": "2025-04-25",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Daeyang Electronics",
+      "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+      "latStd": "37.257356",
+      "lonStd": "127.052550",
+      "stdFilled": false
     },
     {
       "no": 69,
@@ -2886,7 +3506,12 @@
       "lat": "47.422780",
       "lon": "9.369870",
       "modified": "2025-03-15",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Bavaria Technik",
+      "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+      "latStd": "47.422780",
+      "lonStd": "9.369870",
+      "stdFilled": true
     },
     {
       "no": 70,
@@ -2901,10 +3526,15 @@
       "admin": "IL: Illinois",
       "addrEn": "875 N Michigan Avenue  Chicago  Illinois 60611",
       "addrLocal": "875 N Michigan Avenue, 60611 Chicago",
-      "lat": "41.898780",
-      "lon": "-87.623380",
+      "lat": "41.90",
+      "lon": "-87.62",
       "modified": "2025-04-15",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Rheintal Materials",
+      "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+      "latStd": "41.898780",
+      "lonStd": "-87.623380",
+      "stdFilled": false
     },
     {
       "no": 71,
@@ -2919,10 +3549,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "200 Xinghai Street  Suzhou  Jiangsu 215028",
       "addrLocal": "江苏省苏州市星海街200号 215028",
-      "lat": "31.322450",
-      "lon": "120.717800",
+      "lat": "31.32",
+      "lon": "120.72",
       "modified": "2025-09-28",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Zhongsheng Electronics",
+      "addrStd": "200 Xinghai Street, Suzhou, Jiangsu 215028",
+      "latStd": "31.322450",
+      "lonStd": "120.717800",
+      "stdFilled": true
     },
     {
       "no": 72,
@@ -2940,7 +3575,12 @@
       "lat": "35.168060",
       "lon": "136.908390",
       "modified": "2024-01-18",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Sakura Denshi",
+      "addrStd": "3-1-1 Sakae, Naka-ku, Nagoya, Aichi 460-0008",
+      "latStd": "35.168060",
+      "lonStd": "136.908390",
+      "stdFilled": true
     },
     {
       "no": 73,
@@ -2955,10 +3595,15 @@
       "admin": "12: Busan",
       "addrEn": "120 Jung@ng-daero, Jung-gu, Busan, Busan 48943",
       "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-      "lat": "35.106321",
-      "lon": "129.032630",
+      "lat": "35.11",
+      "lon": "129.03",
       "modified": "2025-09-09",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+      "latStd": "35.106321",
+      "lonStd": "129.032630",
+      "stdFilled": false
     },
     {
       "no": 74,
@@ -2973,10 +3618,15 @@
       "admin": "13: Tokyo",
       "addrEn": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
       "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-      "lat": "35.710060",
-      "lon": "139.810700",
+      "lat": "35.71",
+      "lon": "139.81",
       "modified": "2025-02-18",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Asahi Components",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 75,
@@ -2994,7 +3644,12 @@
       "lat": "37.422030",
       "lon": "-122.084000",
       "modified": "2025-11-13",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Alpine Precision",
+      "addrStd": "1600 Amphitheatre Parkway, Mountain View, California 94043",
+      "latStd": "37.422030",
+      "lonStd": "-122.084000",
+      "stdFilled": true
     },
     {
       "no": 76,
@@ -3009,10 +3664,15 @@
       "admin": "12: Busan",
       "addrEn": "중구 중앙대로 120, Busan 48943",
       "addrLocal": "부산광역시 중구 중앙대로 120 (48943)",
-      "lat": "35.106321",
-      "lon": "129.032630",
+      "lat": "35.11",
+      "lon": "129.03",
       "modified": "2025-04-11",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Jinwoo Semiconductor",
+      "addrStd": "120 Jungang-daero, Jung-gu, Busan, Busan 48943",
+      "latStd": "35.106321",
+      "lonStd": "129.032630",
+      "stdFilled": false
     },
     {
       "no": 77,
@@ -3027,10 +3687,15 @@
       "admin": "13: Seoul",
       "addrEn": "14 Sejong-d@ero, Jung-gu, Seoul, Seoul 04524",
       "addrLocal": "서울특별시 중구 세종대로 14 (04524)",
-      "lat": "37.566295",
-      "lon": "126.976889",
+      "lat": "37.57",
+      "lon": "126.98",
       "modified": "2025-11-21",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+      "latStd": "37.566295",
+      "lonStd": "126.976889",
+      "stdFilled": true
     },
     {
       "no": 78,
@@ -3045,10 +3710,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "苏州工业园区苏虹西路8号, Suzhou 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2026-05-08",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Ruifeng Materials",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": true
     },
     {
       "no": 79,
@@ -3063,10 +3733,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "8 Suhong West Road, Suzhou Industrial Park, Suzhou",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2026-06-07",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": false
     },
     {
       "no": 80,
@@ -3081,10 +3756,15 @@
       "admin": "440: Guangdong",
       "addrEn": "1 Keyuan Road  Nanshan District  Shenzhen  Guangdong 518057",
       "addrLocal": "广东省深圳市南山区科苑路1号 518057",
-      "lat": "22.537300",
-      "lon": "113.947700",
+      "lat": "22.54",
+      "lon": "113.95",
       "modified": "2026-07-01",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Ruifeng Materials",
+      "addrStd": "1 Keyuan Road, Nanshan District, Shenzhen, Guangdong 518057",
+      "latStd": "22.537300",
+      "lonStd": "113.947700",
+      "stdFilled": false
     },
     {
       "no": 81,
@@ -3102,7 +3782,12 @@
       "lat": "35.115034",
       "lon": "129.041624",
       "modified": "2026-08-25",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": true
     },
     {
       "no": 82,
@@ -3117,10 +3802,15 @@
       "admin": "020: Shanghai",
       "addrEn": "浦东新区世纪大道1000号, Shanghai 200120",
       "addrLocal": "上海市浦东新区世纪大道1000号 200120",
-      "lat": "31.233705",
-      "lon": "121.524621",
+      "lat": "31.23",
+      "lon": "121.52",
       "modified": "2026-05-26",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Jinlong Semiconductor",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": false
     },
     {
       "no": 83,
@@ -3135,10 +3825,15 @@
       "admin": "100: Jiangsu",
       "addrEn": "8 Suhong West Rd., Suzhou Industrial Park, Suzhou, Jiangsu 215021",
       "addrLocal": "江苏省苏州市苏州工业园区苏虹西路8号 215021",
-      "lat": "31.315610",
-      "lon": "120.686340",
+      "lat": "31.32",
+      "lon": "120.69",
       "modified": "2026-02-26",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Huaxin Technology",
+      "addrStd": "8 Suhong West Road, Suzhou Industrial Park, Suzhou, Jiangsu 215021",
+      "latStd": "31.315610",
+      "lonStd": "120.686340",
+      "stdFilled": false
     },
     {
       "no": 84,
@@ -3156,7 +3851,12 @@
       "lat": "37.566010",
       "lon": "126.982877",
       "modified": "2025-06-12",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Daeyang Electronics",
+      "addrStd": "26 Euljiro, Jung-gu, Seoul, Seoul 04539",
+      "latStd": "37.566010",
+      "lonStd": "126.982877",
+      "stdFilled": true
     },
     {
       "no": 85,
@@ -3174,7 +3874,12 @@
       "lat": "31.233705",
       "lon": "121.524621",
       "modified": "2025-09-23",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Haiyuan Components",
+      "addrStd": "1000 Century Avenue, Pudong New District, Shanghai, Shanghai 200120",
+      "latStd": "31.233705",
+      "lonStd": "121.524621",
+      "stdFilled": true
     },
     {
       "no": 86,
@@ -3192,7 +3897,12 @@
       "lat": "35.710060",
       "lon": "139.810700",
       "modified": "2025-11-19",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Nippon Seimitsu",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 87,
@@ -3207,10 +3917,15 @@
       "admin": "SG: St. Gallen",
       "addrEn": "Bahnhofstrasse 12  St. Gallen  St. Gallen 9000",
       "addrLocal": "Bahnhofstrasse 12, 9000 St. Gallen",
-      "lat": "47.422780",
-      "lon": "9.369870",
+      "lat": "47.42",
+      "lon": "9.37",
       "modified": "2024-05-28",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Pioneer Semiconductor",
+      "addrStd": "Bahnhofstrasse 12, St. Gallen, St. Gallen 9000",
+      "latStd": "47.422780",
+      "lonStd": "9.369870",
+      "stdFilled": true
     },
     {
       "no": 88,
@@ -3225,10 +3940,15 @@
       "admin": "09: Gyeonggi-do",
       "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
       "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-      "lat": "37.257356",
-      "lon": "127.052550",
+      "lat": "37.26",
+      "lon": "127.05",
       "modified": "2026-03-24",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+      "latStd": "37.257356",
+      "lonStd": "127.052550",
+      "stdFilled": true
     },
     {
       "no": 89,
@@ -3243,10 +3963,15 @@
       "admin": "09: Gyeonggi-do",
       "addrEn": "1 Samsung-ro, Yeongtong-gu, Suwon",
       "addrLocal": "경기도 수원시 영통구 삼성로 1 (16677)",
-      "lat": "37.257356",
-      "lon": "127.052550",
+      "lat": "37.26",
+      "lon": "127.05",
       "modified": "2026-09-05",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Nexen Components",
+      "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+      "latStd": "37.257356",
+      "lonStd": "127.052550",
+      "stdFilled": true
     },
     {
       "no": 90,
@@ -3264,7 +3989,12 @@
       "lat": "37.566295",
       "lon": "126.976889",
       "modified": "2026-06-25",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "14 Sejong-daero, Jung-gu, Seoul, Seoul 04524",
+      "latStd": "37.566295",
+      "lonStd": "126.976889",
+      "stdFilled": true
     },
     {
       "no": 91,
@@ -3279,10 +4009,15 @@
       "admin": "SG: St. Gallen",
       "addrEn": "Marktgasse 8, St. Gallen 9004",
       "addrLocal": "Marktgasse 8, 9004 St. Gallen",
-      "lat": "47.425600",
-      "lon": "9.377180",
+      "lat": "47.43",
+      "lon": "9.38",
       "modified": "2025-08-18",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Bavaria Technik",
+      "addrStd": "Marktgasse 8, St. Gallen, St. Gallen 9004",
+      "latStd": "47.425600",
+      "lonStd": "9.377180",
+      "stdFilled": false
     },
     {
       "no": 92,
@@ -3297,10 +4032,15 @@
       "admin": "13: Tokyo",
       "addrEn": "2-11-1 N@gatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
       "addrLocal": "100-0014 東京都千代田区永田町2-11-1",
-      "lat": "35.676190",
-      "lon": "139.744730",
+      "lat": "35.68",
+      "lon": "139.74",
       "modified": "2024-07-23",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Toyo Materials",
+      "addrStd": "2-11-1 Nagatacho, Chiyoda-ku, Tokyo, Tokyo 100-0014",
+      "latStd": "35.676190",
+      "lonStd": "139.744730",
+      "stdFilled": false
     },
     {
       "no": 93,
@@ -3315,10 +4055,15 @@
       "admin": "23: Aichi",
       "addrEn": "1-1-4 Meieki  Nakamura-ku  Nagoya  Aichi 450-0002",
       "addrLocal": "450-0002 愛知県名古屋市中村区名駅1-1-4",
-      "lat": "35.170920",
-      "lon": "136.881637",
+      "lat": "35.17",
+      "lon": "136.88",
       "modified": "2025-05-19",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Daiwa Electronics",
+      "addrStd": "1-1-4 Meieki, Nakamura-ku, Nagoya, Aichi 450-0002",
+      "latStd": "35.170920",
+      "lonStd": "136.881637",
+      "stdFilled": true
     },
     {
       "no": 94,
@@ -3336,7 +4081,12 @@
       "lat": "37.287280",
       "lon": "127.046370",
       "modified": "2025-05-21",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Hanla Precision",
+      "addrStd": "152 Gwanggyo-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16229",
+      "latStd": "37.287280",
+      "lonStd": "127.046370",
+      "stdFilled": true
     },
     {
       "no": 95,
@@ -3354,7 +4104,12 @@
       "lat": "35.710060",
       "lon": "139.810700",
       "modified": "2026-05-27",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Asahi Components",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": false
     },
     {
       "no": 96,
@@ -3369,10 +4124,15 @@
       "admin": "13: Tokyo",
       "addrEn": "1-1-2 Oshiage  Sumida-ku  Tokyo  Tokyo 131-0045",
       "addrLocal": "131-0045 東京都墨田区押上1-1-2",
-      "lat": "35.710060",
-      "lon": "139.810700",
+      "lat": "35.71",
+      "lon": "139.81",
       "modified": "2026-09-08",
-      "source": "Factory Information"
+      "source": "Factory Information",
+      "companyStd": "Daiwa Electronics",
+      "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+      "latStd": "35.710060",
+      "lonStd": "139.810700",
+      "stdFilled": true
     },
     {
       "no": 97,
@@ -3387,10 +4147,15 @@
       "admin": "12: Busan",
       "addrEn": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
       "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-      "lat": "35.115034",
-      "lon": "129.041624",
+      "lat": "35.12",
+      "lon": "129.04",
       "modified": "2024-11-26",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Kyungin Chemical",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": true
     },
     {
       "no": 98,
@@ -3408,7 +4173,12 @@
       "lat": "31.235180",
       "lon": "121.477500",
       "modified": "2024-11-02",
-      "source": "협력사등록"
+      "source": "협력사등록",
+      "companyStd": "Jinlong Semiconductor",
+      "addrStd": "500 Nanjing Road, Huangpu District, Shanghai, Shanghai 200001",
+      "latStd": "31.235180",
+      "lonStd": "121.477500",
+      "stdFilled": true
     },
     {
       "no": 99,
@@ -3426,7 +4196,12 @@
       "lat": "37.257356",
       "lon": "127.052550",
       "modified": "2025-09-17",
-      "source": "원 메이커"
+      "source": "원 메이커",
+      "companyStd": "Sungwoo Materials",
+      "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+      "latStd": "37.257356",
+      "lonStd": "127.052550",
+      "stdFilled": true
     },
     {
       "no": 100,
@@ -3441,10 +4216,15 @@
       "admin": "12: Busan",
       "addrEn": "동구 중앙대로 55, Busan 48821",
       "addrLocal": "부산광역시 동구 중앙대로 55 (48821)",
-      "lat": "35.115034",
-      "lon": "129.041624",
+      "lat": "35.12",
+      "lon": "129.04",
       "modified": "2025-09-21",
-      "source": "Supply Tree"
+      "source": "Supply Tree",
+      "companyStd": "Daeyang Electronics",
+      "addrStd": "55 Jungang-daero, Dong-gu, Busan, Busan 48821",
+      "latStd": "35.115034",
+      "lonStd": "129.041624",
+      "stdFilled": true
     }
   ]
 }

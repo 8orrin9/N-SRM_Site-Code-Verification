@@ -22,9 +22,17 @@ CSV_PATH = os.path.join(ROOT, "data", "site_master.csv")
 OUT_PATH = os.path.join(ROOT, "mockup", "mock_data.json")
 
 sys.path.insert(0, HERE)
-from generate_site_master import COMPANY_POOL, COMPANY_SUFFIX  # noqa: E402
+from generate_site_master import (  # noqa: E402
+    COMPANY_POOL, COMPANY_SUFFIX, PLACES, clean_address,
+)
 
 rng = random.Random(20260908)
+
+# 좌표(6자리) → (place, street) 역인덱스. 표준(정제) 주소 파생용.
+COORD2STREET = {}
+for _place in PLACES:
+    for _street in _place["streets"]:
+        COORD2STREET[(f"{_street['lat']:.6f}", f"{_street['lon']:.6f}")] = (_place, _street)
 
 # 접미사(불용어) 목록 — 긴 것부터 제거
 ALL_SUFFIX = sorted({s for v in COMPANY_SUFFIX.values() for s in v}, key=len, reverse=True)
@@ -54,6 +62,38 @@ def match_base(name):
         if r > best_r:
             best_r, best = r, en
     return best if best_r >= 0.6 else None
+
+
+def std_of(r):
+    """행의 정밀 좌표로 표준(정제) 주소·업체명·좌표를 파생한다.
+
+    반환: dict(addrStd, companyStd, latStd, lonStd, noisy, latDisp, lonDisp)
+    - addrStd : PLACES street 역추적 + clean_address 로 만든 표준 영문 주소.
+    - companyStd : match_base 로 추정한 정규 업체명(없으면 원본 유지).
+    - latStd/lonStd : 정밀 6자리 정답 좌표.
+    - noisy : 원본 표기가 표준과 다른(=표준화 여지가 있는) 행인지.
+    - latDisp/lonDisp : 화면 표시용 좌표. 노이즈 행은 저정밀(2자리)로 낮춰
+                        Geocoding 교정 효과가 드러나게 한다.
+    """
+    key = (r["위도"], r["경도"])
+    place, street = COORD2STREET.get(key, (None, None))
+    if place:
+        addr_std, _ = clean_address(place, street)
+    else:
+        addr_std = r["주소(Eng)"]
+    company_std = r.get("_base") or r["업체"]
+    lat_std, lon_std = r["위도"], r["경도"]
+    noisy = (r["업체"] != company_std) or (r["주소(Eng)"] != addr_std)
+    lat_disp = f"{float(r['위도']):.2f}" if noisy else lat_std
+    lon_disp = f"{float(r['경도']):.2f}" if noisy else lon_std
+    return dict(addrStd=addr_std, companyStd=company_std, latStd=lat_std,
+                lonStd=lon_std, noisy=noisy, latDisp=lat_disp, lonDisp=lon_disp)
+
+
+def std_filled(r):
+    """초기 표준화 완료 여부(결정적). 이미 확정된 Site 또는 No.가 3의 배수인
+    행은 표준화가 끝난 것으로 미리 채워 Before/After 를 함께 보여준다."""
+    return r["Status"] == "등록확정" or int(r["No."]) % 3 == 0
 
 
 def ratio(a, b):
@@ -90,6 +130,7 @@ def sims(reg, rec, band):
 
 def rec_obj(reg, rec, band):
     s = sims(reg, rec, band)
+    std = std_of(reg)
     return {
         "no": int(reg["No."]),
         "status": reg["Status"],
@@ -100,9 +141,12 @@ def rec_obj(reg, rec, band):
             "country": reg["국가/지역"],
             "admin": reg["행정구역"],
             "addr": reg["주소(Eng)"],
-            "lat": reg["위도"], "lon": reg["경도"],
+            "lat": std["latDisp"], "lon": std["lonDisp"],
             "partner": reg["관련 협력사 코드"],
             "source": reg["Site 출처"],
+            "companyStd": std["companyStd"], "addrStd": std["addrStd"],
+            "latStd": std["latStd"], "lonStd": std["lonStd"],
+            "stdFilled": std_filled(reg),
         },
         "rec": {
             "siteCode": rec["Site Code"],
@@ -125,6 +169,7 @@ def rec_obj(reg, rec, band):
 
 def hist_obj(r):
     """검증이력 행: 확정된 Site의 하위 공급망 정보(자체 Site Code 포함)."""
+    std = std_of(r)
     return {
         "no": int(r["No."]),
         "status": r["Status"],
@@ -136,9 +181,12 @@ def hist_obj(r):
             "country": r["국가/지역"],
             "admin": r["행정구역"],
             "addr": r["주소(Eng)"],
-            "lat": r["위도"], "lon": r["경도"],
+            "lat": std["latDisp"], "lon": std["lonDisp"],
             "partner": r["관련 협력사 코드"],
             "source": r["Site 출처"],
+            "companyStd": std["companyStd"], "addrStd": std["addrStd"],
+            "latStd": std["latStd"], "lonStd": std["lonStd"],
+            "stdFilled": std_filled(r),
         },
         "modified": r["수정일"],
     }
@@ -146,6 +194,7 @@ def hist_obj(r):
 
 def master_obj(r):
     """Site Registration 관리 화면용: Site 마스터 원본 전체 필드."""
+    std = std_of(r)
     return {
         "no": int(r["No."]),
         "status": r["Status"],
@@ -159,9 +208,12 @@ def master_obj(r):
         "admin": r["행정구역"],
         "addrEn": r["주소(Eng)"],
         "addrLocal": r["주소(Local)"],
-        "lat": r["위도"], "lon": r["경도"],
+        "lat": std["latDisp"], "lon": std["lonDisp"],
         "modified": r["수정일"],
         "source": r["Site 출처"],
+        "companyStd": std["companyStd"], "addrStd": std["addrStd"],
+        "latStd": std["latStd"], "lonStd": std["lonStd"],
+        "stdFilled": std_filled(r),
     }
 
 
