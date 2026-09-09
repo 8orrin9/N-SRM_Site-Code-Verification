@@ -219,6 +219,10 @@
   .s-재검토요청 { background: #fdecea; color: var(--danger); }
   .s-검증완료 { background: var(--blue); color: #e7effc; }
 
+  /* 리스크 영향 Site 행 강조(연한 핑크) */
+  table.grid tbody tr.is-risk td { background: #fdeef0; }
+  table.grid tbody tr.is-risk:hover td { background: #fbe3e7; }
+
   .seg { color: #888; }
   .zoom { cursor: pointer; color: var(--blue); font-size: 14px; }
   .zoom:hover { color: var(--blue-dark); }
@@ -420,6 +424,46 @@
   .base-badge { background: var(--std-accent); color: #fff; font-size: 10.5px; font-weight: 700;
     padding: 2px 7px; border-radius: 9px; flex: none; }
   .mc-empty { padding: 24px 16px; text-align: center; color: var(--text-sub); font-size: 12.5px; line-height: 1.6; }
+
+  /* ---- Site 상세 정보 팝업 ---- */
+  .sd-body { max-height: 74vh; overflow: auto; }
+  .sd-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; margin-bottom: 4px; }
+  .sd-sec { margin-bottom: 16px; }
+  .sd-sec:last-child { margin-bottom: 0; }
+  .sd-sec-title { font-size: 12.5px; font-weight: 700; color: var(--std-accent);
+    padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .sd-info { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12.5px; }
+  .sd-info .k { color: var(--text-sub); white-space: nowrap; }
+  .sd-info .v { color: var(--text); word-break: break-word; }
+  .sd-map { height: 260px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .sd-right .sd-sec-title { margin-bottom: 8px; }
+  .mat-block { margin-bottom: 10px; }
+  .mat-block:last-child { margin-bottom: 0; }
+  .mat-lbl { font-size: 11.5px; color: var(--text-sub); font-weight: 600; margin-bottom: 4px; }
+  .mat-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    background: #f6f7f9; border: 1px solid var(--line); color: #444;
+    border-radius: 5px; padding: 3px 9px; margin: 0 6px 6px 0; font-variant-numeric: tabular-nums; }
+  .sd-alt-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12px;
+    color: var(--text-sub); line-height: 1.6; margin-bottom: 8px; }
+  .sd-alt-note .info-ic { flex: none; margin-top: 1px; }
+  .sd-alt-wrap { border: 1px solid var(--line); border-radius: 6px; overflow: auto; max-height: 40vh; }
+  table.grid.sd-alt-table { font-size: 12px; }
+  table.grid.sd-alt-table thead tr.col th { top: 0; height: 30px; }
+  table.grid.sd-alt-table td { text-align: center; height: 30px; }
+  table.grid.sd-alt-table td.alt-name { text-align: left; }
+  tr.alt-hit td { background: #e7effc; }
+  tr.alt-hit:hover td { background: #dbe6fb; }
+  .sd-agent-info { margin-bottom: 12px;
+    background: #fdeef0; border: 1px solid #f2c9d1; border-radius: 6px;
+    padding: 12px 16px; font-size: 12.5px; line-height: 1.65; color: var(--text); }
+  .sd-agent-info .ai-list { margin: 0; padding-left: 18px; }
+  .sd-agent-info .ai-list li { margin-bottom: 5px; }
+  .sd-agent-info .ai-list li:last-child { margin-bottom: 0; }
+  .sd-agent-info b { color: var(--danger); }
+  .sd-head-left { display: flex; align-items: center; gap: 8px; }
+  .sd-back { border: none; background: none; font-size: 19px; line-height: 1;
+    color: var(--text-sub); cursor: pointer; padding: 0 2px; }
+  .sd-back:hover { color: var(--blue); }
 </style>
 </head>
 <body>
@@ -477,7 +521,7 @@
         </div>
       </div>
       <div class="filter-actions">
-        <button class="btn ghost" id="btn-reset">필터 Reset</button>
+        <button class="btn ghost" id="btn-reset">Reset</button>
         <button class="btn primary" id="btn-search">검색</button>
       </div>
     </div>
@@ -569,6 +613,7 @@
             <th rowspan="2" class="sortable" data-key="status" data-type="str">Status</th>
             <th class="g-sub" colspan="15">하위 공급망 정보</th>
             <th rowspan="2" class="sortable" data-key="modified" data-type="str">최종 수정일</th>
+            <th rowspan="2">상세 정보</th>
           </tr>
           <tr class="col">
             <th class="c-sub sortable" data-key="sub.siteCode" data-type="str">Site Code</th>
@@ -980,6 +1025,57 @@
         <div class="mc-col" id="mc-right">
           <div class="mc-col-head">병합 대상</div>
           <div class="mc-col-body" id="mc-right-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Site 상세 정보 팝업 -->
+<div class="modal-overlay" id="site-detail-modal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <span class="sd-head-left">
+        <button class="sd-back" id="sd-back" title="뒤로가기" style="display:none">&#8592;</button>
+        <span class="modal-title" id="sd-title">Site 상세 정보</span>
+      </span>
+      <button class="modal-x" id="sd-close" title="닫기">&times;</button>
+    </div>
+    <div class="modal-body sd-body">
+      <div class="sd-grid">
+        <div class="sd-left">
+          <div class="sd-sec">
+            <div class="sd-sec-title">협력사 기본 정보</div>
+            <div class="sd-info" id="sd-basic"></div>
+          </div>
+          <div class="sd-sec">
+            <div class="sd-sec-title">관련 협력사</div>
+            <div class="sd-info" id="sd-partner"></div>
+          </div>
+          <div class="sd-sec">
+            <div class="sd-sec-title">취급 물자</div>
+            <div id="sd-material"></div>
+          </div>
+        </div>
+        <div class="sd-right">
+          <div class="sd-sec-title">위치</div>
+          <div class="sd-map" id="sd-map"></div>
+        </div>
+      </div>
+      <div class="sd-sec" id="sd-alt-sec">
+        <div class="sd-sec-title">에이전트의 리스크 분석 결과</div>
+        <div class="sd-agent-info" id="sd-agent-info"></div>
+        <div class="sd-alt-note"><span class="info-ic">!</span><span>에이전트 리스크 분석 결과를 고려한 대체 가능 Site는 하늘색으로 하이라이트 처리되었습니다.</span></div>
+        <div class="sd-alt-wrap">
+          <table class="grid sd-alt-table">
+            <thead>
+              <tr class="col">
+                <th>Site Code</th><th>업체명(STD)</th><th>Site 유형</th>
+                <th>국가/지역</th><th>행정구역</th><th>취급 물자</th><th>상세</th>
+              </tr>
+            </thead>
+            <tbody id="sd-alt-body"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -5334,6 +5430,102 @@ const MASTER = [
   }
 ];
 
+// ---- 취급 물자 카탈로그 (2계층: 자재/부품 ← 원소재) --------------------------
+// 자재/부품 코드 = "Q"+3자리+"-"+6자리, 원소재 코드 = "-" 포함 9~10자리 숫자.
+// 실제 기능 구현 시 협력사-Site-물자 매핑 테이블에서 조회할 정보를 시연용 상수로 둔다.
+const MATERIAL = {
+  parts: {
+    WAFER:   { code: 'Q210-300112', name: '반도체 웨이퍼(300mm)', raws: ['55-120-3308', '77-410-2265'] },
+    CAMERA:  { code: 'Q470-882015', name: '카메라 모듈',          raws: ['33-902-1140', '77-410-2265'] },
+    MLCC:    { code: 'Q655-140982', name: '적층세라믹콘덴서(MLCC)', raws: ['61-330-7781', '88-204-9950'] },
+    HOUSING: { code: 'Q180-559030', name: '정밀 가공 하우징',      raws: ['42-771-0060'] },
+  },
+  raws: {
+    '55-120-3308': '폴리실리콘 잉곳',
+    '55-120-4417': '폴리실리콘 잉곳(대체 소스)',
+    '77-410-2265': '포토레지스트',
+    '33-902-1140': '광학 글라스',
+    '61-330-7781': '티탄산바륨 분말',
+    '88-204-9950': '니켈 파우더',
+    '42-771-0060': '알루미늄 합금 빌릿',
+  },
+  // 원소재 전문 공급 Site(부품 없이 원소재만 취급)의 취급 원소재
+  rawGroups: {
+    METAL_RAW: ['88-204-9950', '42-771-0060'],
+    CHEM_RAW:  ['77-410-2265', '61-330-7781'],
+  },
+};
+
+// 리스크 영향 Site(검증이력 no) → 비정형 리스크 센싱 에이전트의 분석 결과·대체 판정 유형.
+// type: partner(협력사)·location(지역)·port(항만 이벤트→항구/공항 제외)·material(원소재).
+// evidence: 에이전트가 뉴스를 센싱·분석해 도출한 리스크 판단(시연: 기능 구현 완료 가정).
+const RISK_SCENARIOS = {
+  28: {
+    type: 'partner',
+    evidence: '수집된 뉴스에서 <b>협력사 리스크</b>가 식별되었습니다. 협력사 <b>Haiyuan Components</b>의 쑤저우 공장에서 대형 화재가 발생해 전 생산 라인이 중단되었으며, 정상화까지 최소 3개월이 소요될 것으로 분석됩니다. 해당 협력사가 운영하는 Site(S699947, 자재/부품 Q655-140982 생산)의 공급 차질이 예상됩니다.',
+    note: '리스크 협력사(Haiyuan Components)를 제외하고, 동일 물자(Q655-140982)를 취급하는 다른 협력사의 Site를 대체 가능 Site로 판정했습니다.',
+  },
+  34: {
+    type: 'location',
+    evidence: '수집된 뉴스에서 <b>Site 위치(지역) 리스크</b>가 식별되었습니다. <b>중국 상하이(Pudong)</b> 일대의 대규모 정전과 물류 통제가 장기화되어 역내 제조 거점의 가동률이 급락한 것으로 분석됩니다. 해당 지역에 위치한 Site(S408382, 자재/부품 Q180-559030 생산)의 생산·출하 차질이 예상됩니다.',
+    note: '리스크 지역(상하이)을 제외하고, 동일 물자(Q180-559030)를 취급하는 다른 지역의 Site를 대체 가능 Site로 판정했습니다.',
+  },
+  19: {
+    type: 'port',
+    evidence: '수집된 뉴스에서 <b>Site 위치 리스크</b>가 식별되었습니다. <b>미국 서안 항만</b>의 노사 협상 결렬로 Long Beach·LA항의 하역이 전면 중단되어 수출입 물류가 마비된 것으로 분석됩니다. 해당 항만을 이용하는 Site(S465433, 자재/부품 Q180-559030)의 물류 차질이 예상됩니다.',
+    note: '리스크 지역을 제외하고 동일 물자(Q180-559030)를 취급하는 다른 지역 Site를 대체 대상으로 판정하되, 이번 리스크가 항만 하역 마비이므로 항구/공항 유형 Site는 대체 대상에서 제외했습니다.',
+  },
+  17: {
+    type: 'material',
+    riskRaw: '55-120-3308',
+    evidence: '수집된 뉴스에서 <b>취급 물자(원소재) 리스크</b>가 식별되었습니다. 원소재 <b>55-120-3308</b>의 주력 공급사가 감산·수출 제한에 들어가 자재/부품 Q210-300112용 원소재 수급 차질이 확대되는 것으로 분석됩니다. 해당 원소재에 의존하는 Site(S607790, 자재/부품 Q210-300112 생산)의 생산 차질이 예상됩니다.',
+    note: '리스크 원소재(55-120-3308)에 의존하는 Site를 제외하고, 동일 물자(Q210-300112)를 취급하되 대체 소스를 확보한 Site를 대체 가능 Site로 판정했습니다.',
+  },
+};
+
+// 관련 협력사(partner 코드가 가리키는 별개 협력사)의 업체명 매핑 — 결정적 파생.
+const PARTNER_POOL = ['우진산업', '대성테크', '한도상사', 'SG Trading', 'Meridian Parts',
+  '정원물산', 'Keystone Supply', '도아무역', 'Yamato Logistics', 'Blue Ridge Materials',
+  '성진통상', 'Orient Components'];
+// MASTER 행에는 관련 협력사 코드가 없으므로 siteCode에서 결정적으로 파생한다.
+function partnerCode(m) {
+  const d = String(m.siteCode).replace(/\D/g, '');
+  const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  return a[+d[0] % 26] + a[+d[2] % 26] + d.slice(3, 5) + a[+d[5] % 26];
+}
+function partnerName(code) {
+  if (!code) return '';
+  let h = 0;
+  for (const ch of String(code)) h = (h + ch.charCodeAt(0)) % PARTNER_POOL.length;
+  return PARTNER_POOL[h];
+}
+
+// companyStd(표준 업체명) 업종 키워드로 취급 물자 그룹을 파생한다(데이터 중복 없이 결정적).
+function matGroup(companyStd) {
+  const c = companyStd || '';
+  if (/Semiconductor|Handotai/.test(c)) return 'WAFER';
+  if (/Electronics|Denshi|Technology|Technik|Elektronik/.test(c)) return 'CAMERA';
+  if (/Components/.test(c)) return 'MLCC';
+  if (/Precision|Seimitsu|Präzision/.test(c)) return 'HOUSING';
+  if (/Materials|Materialien/.test(c)) return 'METAL_RAW';
+  if (/Chemical/.test(c)) return 'CHEM_RAW';
+  return null;
+}
+
+// Site가 취급하는 물자(자재/부품 + 구성 원소재). 원소재 전문 Site는 부품 없이 원소재만.
+function siteMaterials(companyStd, no) {
+  const g = matGroup(companyStd);
+  if (g === 'METAL_RAW' || g === 'CHEM_RAW') {
+    return { group: g, kind: 'raw', part: null, raws: MATERIAL.rawGroups[g].slice() };
+  }
+  const p = MATERIAL.parts[g];
+  if (!p) return { group: null, kind: null, part: null, raws: [] };
+  let raws = p.raws.slice();
+  // 웨이퍼: 짝수 No.는 폴리실리콘 대체 소스를 확보(이원화)한 Site로 파생 → 원소재 리스크 시연.
+  if (g === 'WAFER' && no % 2 === 0) raws = raws.map(c => (c === '55-120-3308' ? '55-120-4417' : c));
+  return { group: g, kind: 'part', part: p, raws };
+}
+
 let currentTab = 'newAssign';
 
 const $ = (s, r=document) => r.querySelector(s);
@@ -5404,7 +5596,8 @@ function rowHtml(r) {
 
 function histRowHtml(r) {
   const s = r.sub;
-  return `<tr data-no="${r.no}">
+  const risk = !!RISK_SCENARIOS[r.no];
+  return `<tr data-no="${r.no}"${risk ? ' class="is-risk"' : ''}>
     <td class="left-cell">${r.no}</td>
     <td class="left-cell"><input type="checkbox" class="chk row-chk-h"></td>
     <td class="left-cell"><span class="seg">DS</span></td>
@@ -5427,6 +5620,7 @@ function histRowHtml(r) {
     <td class="sub-cell">${esc(s.source)}</td>
 
     <td class="left-cell">${esc(r.modified)}</td>
+    <td class="left-cell"><span class="zoom detail-zoom" data-no="${r.no}" title="상세보기"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><line x1="12.5" y1="12.5" x2="17" y2="17"></line></svg></span></td>
   </tr>`;
 }
 
@@ -6555,6 +6749,170 @@ $('#mcheck-apply').addEventListener('click', () => {
     });
   });
 })();
+
+// ==== Site 상세 정보 팝업 ====================================================
+// 검증이력 행의 돋보기 → Site 상세(협력사·관련 협력사·취급 물자·지도·대체 Site).
+// 리스크 영향 Site(RISK_SCENARIOS)일 때만 대체 리스트 + 하이라이트 + 에이전트 Info 노출.
+let sdMap = null, sdMarker = null;
+function ensureSdMap() {
+  if (typeof L === 'undefined') return;
+  if (!sdMap) {
+    sdMap = L.map('sd-map', { attributionControl: false }).setView([25, 110], 2);
+    L.tileLayer(CARTO_URL, { maxZoom: 19 }).addTo(sdMap);
+  }
+  setTimeout(() => sdMap.invalidateSize(), 60);
+}
+function sdSetPin(lat, lon) {
+  if (typeof L === 'undefined' || !sdMap) return;
+  const ll = [parseFloat(lat), parseFloat(lon)];
+  if (!sdMarker) sdMarker = L.marker(ll).addTo(sdMap); else sdMarker.setLatLng(ll);
+  sdMap.setView(ll, 13);
+}
+
+// 취급 물자 섹션 렌더 (자재/부품 + 구성 원소재, 코드만 표기).
+function matSectionHtml(mats) {
+  if (!mats.group) return '<div class="sd-info"><span class="v">취급 물자 정보 없음</span></div>';
+  let html = '';
+  if (mats.kind === 'part' && mats.part) {
+    html += `<div class="mat-block"><div class="mat-lbl">자재/부품</div>
+      <span class="mat-chip">${esc(mats.part.code)}</span></div>`;
+  }
+  html += `<div class="mat-block"><div class="mat-lbl">원소재</div>` +
+    mats.raws.map(rc => `<span class="mat-chip raw">${esc(rc)}</span>`).join('') + `</div>`;
+  return html;
+}
+
+// 대체 후보가 리스크를 극복하는지(하이라이트 대상인지) 판정.
+function isAltSafe(scenario, base, cand) {
+  const bMat = siteMaterials(base.companyStd, base.no);
+  const cMat = siteMaterials(cand.companyStd, cand.no);
+  if (!scenario.type) return false;
+  if (scenario.type === 'partner') {
+    // 동일 물자 & 다른 협력사(업체)
+    return base.companyStd !== cand.companyStd;
+  }
+  if (scenario.type === 'location') {
+    // 동일 물자 & 다른 지역(행정구역)
+    return base.admin !== cand.admin;
+  }
+  if (scenario.type === 'port') {
+    // 동일 물자 & 다른 지역 & 항구/공항 유형 제외(항만 이벤트)
+    return base.admin !== cand.admin && cand.siteType === '제조업체';
+  }
+  if (scenario.type === 'material') {
+    // 동일 물자(부품) & 리스크 원소재 미의존
+    return !cMat.raws.includes(scenario.riskRaw);
+  }
+  return false;
+}
+
+// 대체 후보 = 동일 물자 그룹을 취급하는 MASTER Site (자기 자신 제외).
+function findAltSites(base) {
+  const g = matGroup(base.companyStd);
+  if (!g) return [];
+  return MASTER.filter(m => m.siteCode !== base.siteCode && matGroup(m.companyStd) === g);
+}
+
+function altRowHtml(scenario, base, m) {
+  const mats = siteMaterials(m.companyStd, m.no);
+  const partCode = mats.part ? mats.part.code : '원소재만';
+  const hit = scenario && isAltSafe(scenario, base, m);
+  return `<tr class="${hit ? 'alt-hit' : ''}" data-code="${esc(m.siteCode)}">
+    <td><b>${esc(m.siteCode)}</b></td>
+    <td class="alt-name">${esc(m.companyStd)}</td>
+    <td>${esc(m.siteType)}</td>
+    <td>${esc(m.country)}</td>
+    <td>${esc(m.admin)}</td>
+    <td>${esc(partCode)}</td>
+    <td><span class="zoom alt-detail-zoom" data-code="${esc(m.siteCode)}" title="상세보기"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><line x1="12.5" y1="12.5" x2="17" y2="17"></line></svg></span></td>
+  </tr>`;
+}
+
+// 상세 팝업 네비게이션 스택 — 드릴다운 후 뒤로가기로 이전 팝업으로 복귀.
+let sdStack = [], sdState = null;
+
+// no(검증이력) 또는 siteCode(MASTER)로 Site 상세를 새로 연다(스택 초기화).
+function openSiteDetailByNo(no) {
+  const m = MASTER.find(x => x.no === no);
+  if (!m) return;
+  sdStack = [];
+  navSiteDetail({ m, scenario: RISK_SCENARIOS[no] || null });
+  $('#site-detail-modal').classList.add('show');
+}
+// 드릴다운(대체 리스트 내 Site 클릭) → 현재 상태를 스택에 쌓고 새 상세로 이동.
+function drillSiteDetailByCode(code) {
+  const m = MASTER.find(x => x.siteCode === code);
+  if (!m || !sdState) return;
+  sdStack.push(sdState);
+  navSiteDetail({ m, scenario: null });   // 드릴다운 대상은 대체 리스트 없음
+}
+
+function navSiteDetail(state) {
+  sdState = state;
+  renderSiteDetail(state.m, state.scenario);
+  $('#sd-back').style.display = sdStack.length ? '' : 'none';
+}
+
+function renderSiteDetail(m, scenario) {
+  $('#sd-title').textContent = `Site 상세 정보 — ${m.siteCode}`;
+  const pcode = partnerCode(m);
+  $('#sd-basic').innerHTML = [
+    ['Site Code', m.siteCode], ['업체명(STD)', m.companyStd], ['업체명', m.company],
+    ['Site 유형', m.siteType + (m.portCode ? ` (${m.portCode})` : '')],
+    ['기업식별 코드', m.corpId || '—'], ['Duns No.', m.duns || '—'],
+    ['국가/지역', m.country], ['행정구역', m.admin], ['주소(STD)', m.addrStd],
+    ['Site 출처', m.source],
+  ].map(([k, v]) => `<span class="k">${esc(k)}</span><span class="v">${esc(v)}</span>`).join('');
+
+  $('#sd-partner').innerHTML = [
+    ['업체명', partnerName(pcode)], ['협력사 코드', pcode],
+  ].map(([k, v]) => `<span class="k">${esc(k)}</span><span class="v">${esc(v)}</span>`).join('');
+
+  const mats = siteMaterials(m.companyStd, m.no);
+  $('#sd-material').innerHTML = matSectionHtml(mats);
+
+  // 에이전트 리스크 분석 결과 + 대체 가능 Site 리스트 (리스크 영향 원본에서만)
+  const altSec = $('#sd-alt-sec');
+  if (scenario) {
+    const base = m;
+    const alts = findAltSites(base);
+    // 하이라이트(극복 가능) 후보를 상단에 정렬 — 결정적(원 순서 유지 안정 정렬).
+    const ordered = alts.map((c, i) => ({ c, i, hit: isAltSafe(scenario, base, c) }))
+      .sort((a, b) => (b.hit - a.hit) || (a.i - b.i)).map(x => x.c);
+    $('#sd-alt-body').innerHTML = ordered.map(c => altRowHtml(scenario, base, c)).join('')
+      || '<tr><td colspan="7" class="mc-empty">동일 물자를 취급하는 다른 Site가 없습니다.</td></tr>';
+    // 문장 단위(…다.) 불렛 — evidence는 신뢰된 HTML(<b>), note는 esc 처리.
+    const splitSent = t => t.split(/(?<=다\.)\s*/).map(s => s.trim()).filter(Boolean);
+    const items = splitSent(scenario.evidence).map(s => `<li>${s}</li>`).join('')
+      + splitSent(scenario.note).map(s => `<li>${esc(s)}</li>`).join('');
+    $('#sd-agent-info').innerHTML = `<ul class="ai-list">${items}</ul>`;
+    altSec.style.display = '';
+  } else {
+    altSec.style.display = 'none';
+  }
+
+  ensureSdMap();
+  sdSetPin(m.latStd, m.lonStd);
+}
+
+function closeSiteDetail() { $('#site-detail-modal').classList.remove('show'); }
+$('#sd-close').addEventListener('click', closeSiteDetail);
+$('#site-detail-modal').addEventListener('click', (e) => { if (e.target === $('#site-detail-modal')) closeSiteDetail(); });
+$('#sd-back').addEventListener('click', () => {
+  const prev = sdStack.pop();
+  if (prev) navSiteDetail(prev);
+});
+
+// 검증이력 테이블 돋보기 → 상세 팝업(위임)
+$('#tbody-h').addEventListener('click', (e) => {
+  const z = e.target.closest('.detail-zoom'); if (!z) return;
+  openSiteDetailByNo(Number(z.dataset.no));
+});
+// 대체 리스트 내 Site 돋보기 → 해당 Site 일반 상세로 드릴다운(위임)
+$('#sd-alt-body').addEventListener('click', (e) => {
+  const z = e.target.closest('.alt-detail-zoom'); if (!z) return;
+  drillSiteDetailByCode(z.dataset.code);
+});
 
 render();
 renderReg();
