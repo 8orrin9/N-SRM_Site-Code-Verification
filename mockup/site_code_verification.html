@@ -217,6 +217,7 @@
   .s-검증중 { background: #e7effc; color: var(--blue); }
   .s-임시저장 { background: #f0f0f0; color: var(--gray); }
   .s-재검토요청 { background: #fdecea; color: var(--danger); }
+  .s-검증완료 { background: var(--blue); color: #e7effc; }
 
   .seg { color: #888; }
   .zoom { cursor: pointer; color: var(--blue); font-size: 14px; }
@@ -358,7 +359,8 @@
 
   /* 표준화 팝업 */
   .std-body { padding: 4px 2px; }
-  .std-note { font-size: 13px; line-height: 1.6; color: var(--text); background: #fafafa;
+  .std-note { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.6;
+    color: var(--text); background: #fafafa;
     border: 1px solid #ededed; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; }
   .std-note b { color: var(--std-accent); }
   .std-targets { display: flex; gap: 10px; }
@@ -379,6 +381,45 @@
   .field-std input.block { background: var(--std-tint); color: var(--std-accent); border-color: #dbdfef; }
   /* 글로벌 기업정보 검색 팝업의 표준화 입력란 — 수기 등록 팝업과 동일 톤 */
   .corp-inputs .field-std input.block, .corp-right .field-std input.block { background: #eceef1; color: var(--text-sub); border-color: #ccc; }
+
+  /* ---- 정합성 검증 팝업 ---- */
+  .verify-lead { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; line-height: 1.5; }
+  .verify-lead b { color: var(--std-accent); }
+  .mc-title-note { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; color: var(--text-sub);
+    line-height: 1.6; padding: 16px 18px 2px; }
+  .mc-wrap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: start; }
+  .mc-col { border: 1px solid var(--line); border-radius: 6px; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
+  .mc-col-head { padding: 10px 12px; font-weight: 700; font-size: 13px; color: var(--std-accent);
+    background: var(--std-tint); border-bottom: 1px solid var(--line); }
+  .mc-col-body { padding: 10px; overflow: auto; max-height: 52vh; min-height: 120px; }
+  .mc-mid { display: flex; flex-direction: column; justify-content: center; gap: 10px; align-self: center; }
+  .mc-move-btn { border: 1px solid var(--blue-line); background: #fff; color: var(--blue); border-radius: 6px;
+    padding: 9px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .mc-move-btn:hover { background: var(--std-tint); }
+  .mc-group { border: 1px solid var(--blue-line); border-radius: 6px; margin-bottom: 12px; }
+  .mc-group:last-child { margin-bottom: 0; }
+  .mc-group-head { display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 8px 10px; background: var(--blue-soft); border-bottom: 1px solid var(--blue-line); border-radius: 6px 6px 0 0; }
+  .mc-group.collapsed .mc-group-head { border-bottom: none; border-radius: 6px; }
+  .mc-group-chk { flex: none; }
+  .mc-group-title { font-size: 12px; font-weight: 700; color: var(--blue); }
+  .mc-group-title span { font-weight: 400; color: var(--text-sub); }
+  .mc-caret { margin-left: auto; color: var(--blue); font-size: 10px; flex: none; transition: transform .15s; }
+  .mc-group.collapsed .mc-caret { transform: rotate(-90deg); }
+  .mc-card { border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; margin: 8px; background: #fff;
+    cursor: grab; display: flex; gap: 8px; align-items: flex-start; }
+  .mc-card:first-child { margin-top: 8px; }
+  .mc-card.is-base { border: 2px solid var(--std-accent); background: var(--std-tint);
+    box-shadow: inset 3px 0 0 var(--std-accent); }
+  .mc-card.dragging { opacity: .5; }
+  .mc-card.card-dragover { outline: 2px dashed var(--blue); outline-offset: 2px; }
+  .drag-handle { color: #aab; font-size: 13px; line-height: 1.5; cursor: grab; user-select: none; flex: none; }
+  .mc-card-body { font-size: 11.5px; line-height: 1.55; color: var(--text-sub); flex: 1; min-width: 0; }
+  .mc-card-body .mc-line1 { font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mc-card-body .mc-code { font-weight: 700; color: var(--blue); }
+  .base-badge { background: var(--std-accent); color: #fff; font-size: 10.5px; font-weight: 700;
+    padding: 2px 7px; border-radius: 9px; flex: none; }
+  .mc-empty { padding: 24px 16px; text-align: center; color: var(--text-sub); font-size: 12.5px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -458,6 +499,7 @@
         <button class="btn primary" data-act="저장">저장</button>
       </div>
       <div class="actions" id="actions-history" style="display:none">
+        <button class="btn" data-act="정합성 검증">정합성 검증</button>
         <button class="btn" data-act="표준화">표준화</button>
         <button class="btn ghost" data-act="유사도 설정">유사도 설정</button>
         <button class="btn" data-act="확정취소">확정취소</button>
@@ -605,6 +647,7 @@
               <label class="ms-opt"><input type="checkbox" class="ms-opt-chk" value="검증중"> 검증중</label>
               <label class="ms-opt"><input type="checkbox" class="ms-opt-chk" value="등록확정"> 등록확정</label>
               <label class="ms-opt"><input type="checkbox" class="ms-opt-chk" value="재검토요청"> 재검토요청</label>
+              <label class="ms-opt"><input type="checkbox" class="ms-opt-chk" value="검증완료"> 검증완료</label>
             </div>
           </div>
         </div>
@@ -887,6 +930,54 @@
       </div>
       <div class="map-box tall" id="m-map"></div>
       <div class="load-overlay" id="m-loading"><div class="spinner"></div><div class="load-msg">주소 표준화 중…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 정합성 검증 시작 팝업 -->
+<div class="modal-overlay" id="mcheck-start-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">정합성 검증</span>
+      <button class="modal-x" id="mcheck-start-close" title="닫기">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="verify-lead" id="mcheck-start-lead"></div>
+      <div class="sim-note"><span class="info-ic">!</span>특정 행을 선택하지 않은 경우, 현재 화면에서 전체 행에 대해 정합성 검증이 수행됩니다.</div>
+    </div>
+    <div class="simres-bar" style="justify-content:flex-end">
+      <button class="btn primary" id="mcheck-start-run">검증 시작</button>
+    </div>
+    <div class="load-overlay" id="mcheck-loading"><div class="spinner"></div><div class="load-msg">정합성 검증 중…</div></div>
+  </div>
+</div>
+
+<!-- 정합성 검증 결과 팝업 -->
+<div class="modal-overlay" id="mcheck-result-modal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <span class="modal-title">정합성 검증 결과</span>
+      <button class="modal-x" id="mcheck-result-close" title="닫기">&times;</button>
+    </div>
+    <div class="simres-bar" style="justify-content:flex-end">
+      <button class="btn primary" id="mcheck-apply">적용</button>
+    </div>
+    <div class="mc-title-note"><span class="info-ic">!</span><span>병합 기준 Site는 ① Site Code·업체명(Eng)·기업식별코드 등 항목이 가장 많이 채워지고 ② 최종 수정일이 가장 오래된 Site로 자동 선정됩니다. 그룹 내 카드를 맨 위로 끌어 놓아 기준을 변경할 수 있습니다.</span></div>
+    <div class="simres-body">
+      <div class="mc-wrap">
+        <div class="mc-col" id="mc-left">
+          <div class="mc-col-head">중복 검증 결과</div>
+          <div class="mc-col-body" id="mc-left-body"></div>
+        </div>
+        <div class="mc-mid">
+          <button class="mc-move-btn" id="mc-merge-btn">병합 ›</button>
+          <button class="mc-move-btn" id="mc-cancel-btn">‹ 취소</button>
+        </div>
+        <div class="mc-col" id="mc-right">
+          <div class="mc-col-head">병합 대상</div>
+          <div class="mc-col-body" id="mc-right-body"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2817,6 +2908,121 @@ const DATA = {
         "stdFilled": true
       },
       "modified": "2025-07-03"
+    },
+    {
+      "no": 36,
+      "status": "등록확정",
+      "sub": {
+        "siteCode": "S310457",
+        "companyEn": "京仁化学",
+        "corpId": "",
+        "duns": "",
+        "country": "KR: 한국",
+        "admin": "09: Gyeonggi-do",
+        "addr": "삼성로 1, Suwon",
+        "lat": "37.26",
+        "lon": "127.05",
+        "partner": "KMQ2",
+        "source": "Supply Tree",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": true
+      },
+      "modified": "2026-04-18"
+    },
+    {
+      "no": 38,
+      "status": "등록확정",
+      "sub": {
+        "siteCode": "S310458",
+        "companyEn": "Kyungin Chem Co.",
+        "corpId": "6715662752",
+        "duns": "93-931-0371",
+        "country": "KR: 한국",
+        "admin": "09: Gyeonggi-do",
+        "addr": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "lat": "37.257356",
+        "lon": "127.052550",
+        "partner": "KMQR",
+        "source": "협력사등록",
+        "companyStd": "Kyungin Chemical",
+        "addrStd": "1 Samsung-ro, Yeongtong-gu, Suwon, Gyeonggi-do 16677",
+        "latStd": "37.257356",
+        "lonStd": "127.052550",
+        "stdFilled": true
+      },
+      "modified": "2025-11-02"
+    },
+    {
+      "no": 40,
+      "status": "등록확정",
+      "sub": {
+        "siteCode": "S732753",
+        "companyEn": "Summit Elec.",
+        "corpId": "",
+        "duns": "",
+        "country": "US: 미국",
+        "admin": "IL: Illinois",
+        "addr": "875 N Michigan Ave, Chicago",
+        "lat": "41.90",
+        "lon": "-87.62",
+        "partner": "PIC2",
+        "source": "원 메이커",
+        "companyStd": "Summit Electronics",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
+      },
+      "modified": "2026-06-30"
+    },
+    {
+      "no": 42,
+      "status": "등록확정",
+      "sub": {
+        "siteCode": "S732754",
+        "companyEn": "Summit Electronics Ltd",
+        "corpId": "6466923549",
+        "duns": "68-498-1471",
+        "country": "US: 미국",
+        "admin": "IL: Illinois",
+        "addr": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "lat": "41.898780",
+        "lon": "-87.623380",
+        "partner": "PICD",
+        "source": "협력사등록",
+        "companyStd": "Summit Electronics",
+        "addrStd": "875 N Michigan Avenue, Chicago, Illinois 60611",
+        "latStd": "41.898780",
+        "lonStd": "-87.623380",
+        "stdFilled": true
+      },
+      "modified": "2024-12-01"
+    },
+    {
+      "no": 44,
+      "status": "등록확정",
+      "sub": {
+        "siteCode": "S087271",
+        "companyEn": "日本精密株式会社",
+        "corpId": "",
+        "duns": "",
+        "country": "JP: 일본",
+        "admin": "13: Tokyo",
+        "addr": "押上1-1-2, Tokyo",
+        "lat": "35.71",
+        "lon": "139.81",
+        "partner": "N6K2",
+        "source": "Supply Tree",
+        "companyStd": "Nippon Seimitsu",
+        "addrStd": "1-1-2 Oshiage, Sumida-ku, Tokyo, Tokyo 131-0045",
+        "latStd": "35.710060",
+        "lonStd": "139.810700",
+        "stdFilled": true
+      },
+      "modified": "2026-05-20"
     }
   ]
 };
@@ -5528,6 +5734,7 @@ document.querySelectorAll('#page-verification .actions button').forEach(b => {
     const sel = currentTab === 'history' ? '.row-chk-h:checked' : '.row-chk:checked';
     const n = document.querySelectorAll(sel).length;
     if (b.dataset.act === '유사도 설정') { openSimModal(); return; }
+    if (b.dataset.act === '정합성 검증') { openMCheckStart(); return; }
     if (b.dataset.act === '표준화') { openStdModal('verify'); return; }
     toast(`[${b.dataset.act}] — 데모 화면 (선택 ${n}건)`);
   });
@@ -5784,9 +5991,9 @@ function openStdModal(ctx) {
     ? (currentTab === 'history' ? '.row-chk-h:checked' : '.row-chk:checked')
     : '.r-row-chk:checked';
   const n = document.querySelectorAll(sel).length;
-  $('#std-note').innerHTML = n === 0
+  $('#std-note').innerHTML = '<span class="info-ic">!</span><span>' + (n === 0
     ? '특정 행을 선택하지 않았습니다. 현재 화면에서 <b>전체 행</b>에 대해 표준화가 적용됩니다. 표준화 대상을 선택해주세요.'
-    : `선택한 <b>${n}건</b>에 대해 표준화가 적용됩니다.`;
+    : `선택한 <b>${n}건</b>에 대해 표준화가 적용됩니다.`) + '</span>';
   // 대상 항목 토글 초기화(둘 다 선택)
   document.querySelectorAll('#std-modal .ms-btn').forEach(b => b.classList.add('active'));
   $('#std-modal').classList.add('show');
@@ -6135,6 +6342,193 @@ $('#m-apply').addEventListener('click', () => {
   closeManual();
   closeCorpSearch();
   toast('신규 Site 정보가 적용되었습니다.');
+});
+
+// ===== 정합성 검증 (기 등록 Site Code 검증 및 중복 Site 제거) =====
+// 상태: mcGroups = 그룹 배열. 각 그룹 { id, side('left'|'right'), members(정렬된 배열,
+// members[0] = 병합 기준), selected(체크된 no Set) }. 순수 배열 조작으로 결정적.
+let mcGroups = [], mcheckTargetNos = [], mcDragNo = null, mcDragGid = null, mcGidSeq = 0;
+
+// 채움 항목 수(기준 자동 선정 ①) — 값이 있는 주요 항목 개수.
+function mcFilledCount(r) {
+  return ['siteCode', 'companyEn', 'corpId', 'duns', 'partner']
+    .reduce((n, k) => n + (r.sub[k] && String(r.sub[k]).trim() ? 1 : 0), 0);
+}
+// 기준 정렬: ① 채움 많은 것 → ② 최종 수정일 오래된 것 → ③ no (결정적 tie-break).
+function mcSortByBaseRule(ms) {
+  return ms.slice().sort((a, b) => {
+    const fa = mcFilledCount(a), fb = mcFilledCount(b);
+    if (fb !== fa) return fb - fa;
+    if (a.modified !== b.modified) return a.modified < b.modified ? -1 : 1;
+    return a.no - b.no;
+  });
+}
+
+// 중복 판정: companyStd + latStd + lonStd + addrStd 의 AND 조합(삽입순 Map → 결정적).
+// 좌표 같아도 업체 다르면(Huaxin/Zhongsheng), 업체 같아도 좌표 다르면(Dongfang) 안 묶임.
+function buildMCheckGroups(nos) {
+  const rows = (DATA.history || []).filter(r => nos.includes(r.no));
+  const keyOf = r => [r.sub.companyStd || '', r.sub.latStd || '', r.sub.lonStd || '', r.sub.addrStd || ''].join('|');
+  const map = new Map();
+  rows.forEach(r => { const k = keyOf(r); if (!map.has(k)) map.set(k, []); map.get(k).push(r); });
+  mcGidSeq = 0;
+  mcGroups = [...map.values()].filter(g => g.length >= 2).map(members => ({
+    id: 'g' + (mcGidSeq++), side: 'left', members: mcSortByBaseRule(members),
+    checked: false, collapsed: true,
+  }));
+}
+
+function mcGroupById(gid) { return mcGroups.find(g => g.id === gid); }
+
+// ---- 렌더 ----
+function renderMCheck() {
+  const left = mcGroups.filter(g => g.side === 'left');
+  const right = mcGroups.filter(g => g.side === 'right');
+  $('#mc-left-body').innerHTML = left.length
+    ? left.map(mcGroupHtml).join('')
+    : '<div class="mc-empty">중복으로 판정된 Site가 없습니다.</div>';
+  $('#mc-right-body').innerHTML = right.length
+    ? right.map(mcGroupHtml).join('')
+    : '<div class="mc-empty">병합할 업체를 선택하고<br>[병합 ›] 버튼을 눌러 이동하세요.</div>';
+}
+
+function mcGroupHtml(g) {
+  const base = g.members[0];
+  return `<div class="mc-group${g.collapsed ? ' collapsed' : ''}" data-gid="${g.id}">
+    <div class="mc-group-head" data-mc-act="toggle" data-gid="${g.id}">
+      <input type="checkbox" class="chk mc-group-chk" data-gid="${g.id}"${g.checked ? ' checked' : ''}>
+      <div class="mc-group-title">${esc(base.sub.companyStd)} <span>· ${esc(base.sub.latStd)}, ${esc(base.sub.lonStd)} · ${g.members.length}건</span></div>
+      <span class="mc-caret">▼</span>
+    </div>
+    ${g.collapsed ? '' : g.members.map((r, i) => mcCardHtml(g, r, i === 0)).join('')}
+  </div>`;
+}
+
+function mcCardHtml(g, r, isBase) {
+  const s = r.sub;
+  const badge = isBase ? '<span class="base-badge">병합 기준</span>' : '';
+  return `<div class="mc-card${isBase ? ' is-base' : ''}" draggable="true" data-gid="${g.id}" data-no="${r.no}">
+    <span class="drag-handle" title="드래그하여 기준 변경">⣿</span>
+    <div class="mc-card-body">
+      <div class="mc-line1"><span class="mc-code">${esc(s.siteCode)}</span> ${esc(s.companyEn)} ${badge}</div>
+      <div>기업식별코드 ${esc(s.corpId) || '—'} · Duns ${esc(s.duns) || '—'}</div>
+      <div>최종 수정일 ${esc(r.modified)} · 출처 ${esc(s.source)}</div>
+    </div>
+  </div>`;
+}
+
+// ---- 시작 팝업 ----
+function openMCheckStart() {
+  const checked = [...document.querySelectorAll('.row-chk-h:checked')]
+    .map(c => Number(c.closest('tr').dataset.no));
+  mcheckTargetNos = checked.length
+    ? checked
+    : [...document.querySelectorAll('#tbody-h tr')].map(tr => Number(tr.dataset.no));
+  $('#mcheck-start-lead').innerHTML = `선택된 <b>${mcheckTargetNos.length}건</b>의 Site에 대해 정합성 검증을 수행합니다.`;
+  $('#mcheck-start-modal').classList.add('show');
+}
+function closeMCheckStart() { $('#mcheck-start-modal').classList.remove('show'); }
+function closeMCheckResult() { $('#mcheck-result-modal').classList.remove('show'); }
+
+$('#mcheck-start-close').addEventListener('click', closeMCheckStart);
+$('#mcheck-start-modal').addEventListener('click', (e) => { if (e.target === $('#mcheck-start-modal')) closeMCheckStart(); });
+$('#mcheck-result-close').addEventListener('click', closeMCheckResult);
+$('#mcheck-result-modal').addEventListener('click', (e) => { if (e.target === $('#mcheck-result-modal')) closeMCheckResult(); });
+
+$('#mcheck-start-run').addEventListener('click', () => {
+  const load = $('#mcheck-loading');
+  load.classList.add('show');
+  // 결정적 로딩 지연(데모). Math.random/Date.now 미사용.
+  setTimeout(() => {
+    load.classList.remove('show');
+    closeMCheckStart();
+    buildMCheckGroups(mcheckTargetNos);
+    renderMCheck();
+    $('#mcheck-result-modal').classList.add('show');
+  }, 1200);
+});
+
+// ---- 결과 팝업 이벤트(위임 — 재렌더 안전) ----
+function mcBindColumn(bodyId) {
+  const body = $('#' + bodyId);
+  // 그룹 체크박스 (병합/취소 대상 선택)
+  body.addEventListener('change', (e) => {
+    const chk = e.target.closest('.mc-group-chk');
+    if (!chk) return;
+    const g = mcGroupById(chk.dataset.gid); if (!g) return;
+    g.checked = chk.checked;
+  });
+  // 그룹 헤더 클릭 → 접기/펼치기 (체크박스 클릭은 제외)
+  body.addEventListener('click', (e) => {
+    if (e.target.closest('.mc-group-chk')) return;
+    const head = e.target.closest('[data-mc-act="toggle"]');
+    if (!head) return;
+    const g = mcGroupById(head.dataset.gid); if (!g) return;
+    g.collapsed = !g.collapsed;
+    renderMCheck();
+  });
+  // 드래그 앤 드롭 (같은 그룹 내에서만 기준 승격)
+  body.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.mc-card'); if (!card) return;
+    mcDragNo = Number(card.dataset.no); mcDragGid = card.dataset.gid;
+    card.classList.add('dragging');
+  });
+  body.addEventListener('dragover', (e) => {
+    const card = e.target.closest('.mc-card'); if (!card) return;
+    if (card.dataset.gid !== mcDragGid) return;   // 다른 그룹으로는 이동 불가
+    e.preventDefault();
+    card.classList.add('card-dragover');
+  });
+  body.addEventListener('dragleave', (e) => {
+    const card = e.target.closest('.mc-card'); if (card) card.classList.remove('card-dragover');
+  });
+  body.addEventListener('drop', (e) => {
+    const card = e.target.closest('.mc-card'); if (!card) return;
+    if (card.dataset.gid !== mcDragGid) return;
+    e.preventDefault();
+    const g = mcGroupById(mcDragGid); if (!g) return;
+    const idx = g.members.findIndex(m => m.no === mcDragNo);
+    if (idx > -1) {
+      const [moved] = g.members.splice(idx, 1);
+      g.members.unshift(moved);   // 맨 위로 → 기준 승격
+      renderMCheck();
+    }
+  });
+  body.addEventListener('dragend', () => {
+    document.querySelectorAll('#mcheck-result-modal .mc-card').forEach(c =>
+      c.classList.remove('dragging', 'card-dragover'));
+    mcDragNo = null; mcDragGid = null;
+  });
+}
+mcBindColumn('mc-left-body');
+mcBindColumn('mc-right-body');
+
+// 가운데 [병합 ›] — 좌측에서 체크된 업체 그룹을 우측으로 이동.
+$('#mc-merge-btn').addEventListener('click', () => {
+  const picked = mcGroups.filter(g => g.side === 'left' && g.checked);
+  if (!picked.length) { toast('병합할 업체를 선택하세요.'); return; }
+  picked.forEach(g => { g.side = 'right'; g.checked = false; });
+  renderMCheck();
+});
+// 가운데 [‹ 취소] — 우측에서 체크된 업체 그룹을 좌측으로 되돌림.
+$('#mc-cancel-btn').addEventListener('click', () => {
+  const picked = mcGroups.filter(g => g.side === 'right' && g.checked);
+  if (!picked.length) { toast('되돌릴 업체를 선택하세요.'); return; }
+  picked.forEach(g => { g.side = 'left'; g.checked = false; });
+  renderMCheck();
+});
+
+// ---- 적용: 우측(병합 대상) 그룹의 기준 외 멤버를 흡수(제거), 대상 행 status 검증완료 ----
+$('#mcheck-apply').addEventListener('click', () => {
+  const removeNos = new Set();
+  mcGroups.filter(g => g.side === 'right').forEach(g =>
+    g.members.slice(1).forEach(m => removeNos.add(m.no)));   // 기준(0) 제외 흡수
+  const targetSet = new Set(mcheckTargetNos);
+  DATA.history.forEach(r => { if (targetSet.has(r.no)) r.status = '검증완료'; });
+  DATA.history = DATA.history.filter(r => !removeNos.has(r.no));
+  closeMCheckResult();
+  render();
+  toast(`정합성 검증 적용 완료 — ${removeNos.size}건 병합, 대상 ${targetSet.size}건 검증완료`);
 });
 
 render();
