@@ -22,7 +22,7 @@ CSV_PATH = os.path.join(ROOT, "data", "site_master.csv")
 OUT_PATH = os.path.join(ROOT, "mockup", "mock_data.json")
 
 sys.path.insert(0, HERE)
-from generate_site_master import (  # noqa: E402
+from scripts.html_260908_generate_site_master import (  # noqa: E402
     COMPANY_POOL, COMPANY_SUFFIX, PLACES, clean_address,
 )
 
