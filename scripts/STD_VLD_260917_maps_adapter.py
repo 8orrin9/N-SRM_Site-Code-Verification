@@ -8,7 +8,7 @@
   PROXIMITY_MATCH / PLACEID_MISMATCH / UNVERIFIED_NOT_FOUND / 듀얼주소 MISMATCH 등
   모든 분기를 결정적으로 발생시킨다.
 - RealMapsAdapter: 실제 REST 호출(Geocoding + Places API New searchText +
-  Reverse Geocoding). 응답 언어는 영문(en).
+  Reverse Geocoding). 응답 언어는 미지정(원문/현지 표기).
 
 found 정의(TS/TSA): place_id 존재 AND SIM(업체명_STD, displayName_STD).is_match.
   → 어댑터 내부에서 계산하여 두 구현이 동일 불변식을 보장한다.
@@ -36,13 +36,17 @@ from STD_VLD_260917_std_company import SIM, standardize_company  # noqa: E402
 class MapsAdapter(abc.ABC):
     @abc.abstractmethod
     def G(self, query: str) -> dict:
-        """Geocoding. query = 업체명+주소 결합 문자열.
-        반환: {found, address_std, coord_std, place_id_g, address_components_g}"""
+        """Geocoding. query = 주소 문자열(업체명 미포함 — 업체명은 파싱을 흐려
+        도시레벨 APPROXIMATE로 떨어뜨리므로 순수 주소만 전달).
+        반환: {found, address_std, coord_std, place_id_g, address_components_g,
+              location_type}. location_type은 좌표 정밀도(ROOFTOP/RANGE_INTERPOLATED/
+              GEOMETRIC_CENTER/APPROXIMATE)로, APPROXIMATE는 도시·구역 레벨(부정확)."""
 
     @abc.abstractmethod
-    def TS(self, company: str, center_coord) -> dict:
+    def TS(self, company: str, center_coord, *, precise=False) -> dict:
         """좌표 중심 업체명 TextSearch. 1차 실패 시 반경 완화 1회 재시도.
-        반환: {found, relaxed, place_id_t, coord_t, address_components_t}"""
+        precise=True(정밀 지오코딩 좌표)면 이름 매칭 실패 시 근접 유일 POI를 보강 수용.
+        반환: {found, relaxed, proximity, place_id_t, coord_t, address_components_t}"""
 
     @abc.abstractmethod
     def TSA(self, company: str, address_text: str) -> dict:
@@ -180,14 +184,16 @@ class MockMapsAdapter(MapsAdapter):
         hit = self._resolve_by_text(query)
         if hit is None:
             return {"found": False, "address_std": None, "coord_std": None,
-                    "place_id_g": None, "address_components_g": []}
+                    "place_id_g": None, "address_components_g": [],
+                    "location_type": None}
         place, street, idx = hit
         scenario = self._scenario(idx)
 
         # 지오코딩 자체가 실패하는 시나리오
         if scenario in ("g_fail_coord", "g_fail_tsa", "g_fail_rg"):
             return {"found": False, "address_std": None, "coord_std": None,
-                    "place_id_g": None, "address_components_g": []}
+                    "place_id_g": None, "address_components_g": [],
+                    "location_type": None}
 
         # 듀얼주소 MISMATCH: 영문 쿼리는 같은 도시의 '다른 도로'로 어긋나게 한다.
         if scenario == "dual_mismatch" and not _has_cjk(query):
@@ -210,6 +216,7 @@ class MockMapsAdapter(MapsAdapter):
             "coord_std": coord,
             "place_id_g": f"mockG:{_slug(place['city_en'])}:{_slug(street['en'])}",
             "address_components_g": self._components(place, street, "geocoding"),
+            "location_type": "ROOFTOP",  # Mock은 항상 정밀(도시레벨 시나리오 없음)
         }
 
     def _sibling_street(self, place, street):
@@ -218,7 +225,8 @@ class MockMapsAdapter(MapsAdapter):
                 return s
         return None
 
-    def TS(self, company: str, center_coord) -> dict:
+    def TS(self, company: str, center_coord, *, precise=False) -> dict:
+        # precise: Real 어댑터의 근접보강 플래그. Mock은 좌표 정밀도 개념이 없어 무시.
         place, street, idx = self._resolve_by_coord(center_coord)
         scenario = self._scenario(idx)
         comps = self._components(place, street, "places_new")
@@ -305,7 +313,7 @@ class MockMapsAdapter(MapsAdapter):
 # Real 어댑터 (실제 REST 호출)
 # ===========================================================================
 class RealMapsAdapter(MapsAdapter):
-    """실제 Google Maps Platform 호출. 응답 언어는 영문(en)."""
+    """실제 Google Maps Platform 호출. 응답 언어는 미지정(원문/현지 표기)."""
 
     GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
     TEXTSEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
@@ -317,7 +325,7 @@ class RealMapsAdapter(MapsAdapter):
 
     # ---- Geocoding (G, RG 공용) ----
     def _geocode(self, params):
-        p = {"key": self.api_key, "language": "en", **params}
+        p = {"key": self.api_key, **params}  # 언어 미지정 → 원문(현지 표기) 주소 반환
         resp = self.session.get(self.GEOCODE_URL, params=p, timeout=15)
         resp.raise_for_status()
         return resp.json()
@@ -327,9 +335,11 @@ class RealMapsAdapter(MapsAdapter):
         results = data.get("results", [])
         if not results:
             return {"found": False, "address_std": None, "coord_std": None,
-                    "place_id_g": None, "address_components_g": []}
+                    "place_id_g": None, "address_components_g": [],
+                    "location_type": None}
         top = results[0]
-        loc = top["geometry"]["location"]
+        geom = top["geometry"]
+        loc = geom["location"]
         return {
             "found": True,
             "address_std": top.get("formatted_address"),
@@ -337,6 +347,7 @@ class RealMapsAdapter(MapsAdapter):
             "place_id_g": top.get("place_id"),
             "address_components_g": gc.normalize_address_components(
                 top.get("address_components", []), "geocoding"),
+            "location_type": geom.get("location_type"),  # ROOFTOP/RANGE_INTERPOLATED/GEOMETRIC_CENTER/APPROXIMATE
         }
 
     def RG(self, coord) -> dict:
@@ -359,34 +370,69 @@ class RealMapsAdapter(MapsAdapter):
             "X-Goog-Api-Key": self.api_key,
             "X-Goog-FieldMask": (
                 "places.id,places.displayName,places.formattedAddress,"
-                "places.location,places.addressComponents"
+                "places.location,places.addressComponents,places.types"
             ),
         }
-        body = {"textQuery": text_query, "languageCode": "en"}
+        body = {"textQuery": text_query}  # languageCode 미지정 → 원문(현지 표기) 반환
         if location_bias:
             body["locationBias"] = location_bias
         resp = self.session.post(self.TEXTSEARCH_URL, headers=headers, json=body, timeout=15)
         resp.raise_for_status()
         return resp.json().get("places", [])
 
+    # 실재 업체(POI)가 아닌 행정구역/지역 타입 — found 후보에서 제외.
+    # 업체명 접두사가 도시·성 이름과 겹칠 때(예: 'SUZHOU POSTEL' → 'Suzhou')
+    # TextSearch가 도시를 반환하고 SIM이 접두사 유사도로 오매칭하는 것을 차단한다.
+    _NON_POI_TYPES = frozenset({
+        "locality", "sublocality", "political", "country",
+        "administrative_area_level_1", "administrative_area_level_2",
+        "administrative_area_level_3", "postal_code",
+    })
+
+    # 정밀 지오코딩 좌표에 이 반경 내 POI는 '그 주소에 있는 업체'로 본다. CJK↔라틴
+    # 교차언어로 displayName 유사도가 낮아도(예: 'LT Metal'↔'LT메탈', 17m) 좌표로 실재
+    # 확인한다. 실측 근거: 진짜 업체 17·27m vs 오매칭 22km+. 유일 POI일 때만 수용.
+    _PROXIMITY_M = 100.0
+
+    def _pack(self, pl):
+        loc = pl.get("location", {})
+        return {
+            "place_id_t": pl["id"],
+            "coord_t": (loc.get("latitude"), loc.get("longitude")),
+            "address_std": pl.get("formattedAddress"),
+            "address_components_t": gc.normalize_address_components(
+                pl.get("addressComponents", []), "places_new"),
+        }
+
+    def _poi_candidates(self, places):
+        """행정구역 타입을 제외한 실재 POI 후보만."""
+        return [pl for pl in places
+                if pl.get("id") and not (set(pl.get("types") or []) & self._NON_POI_TYPES)]
+
     def _first_match(self, places, company):
-        """place_id 존재 AND SIM(업체명, displayName) 판정으로 found 결정."""
+        """place_id 존재 AND POI 타입 AND SIM(업체명, displayName) 판정으로 found 결정."""
         std_company = standardize_company(company)
-        for pl in places:
+        for pl in self._poi_candidates(places):
             name = (pl.get("displayName") or {}).get("text", "")
             _, is_match = SIM(std_company, name)
-            if pl.get("id") and is_match:
-                loc = pl.get("location", {})
-                return {
-                    "place_id_t": pl["id"],
-                    "coord_t": (loc.get("latitude"), loc.get("longitude")),
-                    "address_std": pl.get("formattedAddress"),
-                    "address_components_t": gc.normalize_address_components(
-                        pl.get("addressComponents", []), "places_new"),
-                }
+            if is_match:
+                return self._pack(pl)
         return None
 
-    def TS(self, company: str, center_coord) -> dict:
+    def _proximity_match(self, places, center_coord):
+        """정밀 좌표(center_coord)에 _PROXIMITY_M 내 POI가 '유일'하면 그 POI를 반환.
+        이름 유사도가 아닌 위치로 실재를 확인한다(교차언어 보강). 없거나 복수면 None."""
+        near = []
+        for pl in self._poi_candidates(places):
+            loc = pl.get("location", {})
+            lat, lon = loc.get("latitude"), loc.get("longitude")
+            if lat is None or lon is None:
+                continue
+            if gc.haversine(center_coord, (lat, lon)) <= self._PROXIMITY_M:
+                near.append(pl)
+        return self._pack(near[0]) if len(near) == 1 else None
+
+    def TS(self, company: str, center_coord, *, precise=False) -> dict:
         def _bias(radius):
             return {"circle": {"center": {"latitude": center_coord[0],
                                           "longitude": center_coord[1]},
@@ -395,13 +441,18 @@ class RealMapsAdapter(MapsAdapter):
         places = self._search_text(company, location_bias=_bias(2000.0))
         m = self._first_match(places, company)
         if m:
-            return {"found": True, "relaxed": False, **m}
+            return {"found": True, "relaxed": False, "proximity": False, **m}
+        # 1-보강: 이름 매칭 실패 + 정밀 좌표면 근접 유일 POI 수용(교차언어)
+        if precise:
+            p = self._proximity_match(places, center_coord)
+            if p:
+                return {"found": True, "relaxed": False, "proximity": True, **p}
         # 2차: 반경 완화 재시도
         places = self._search_text(company, location_bias=_bias(20000.0))
         m = self._first_match(places, company)
         if m:
-            return {"found": True, "relaxed": True, **m}
-        return {"found": False, "relaxed": True, "place_id_t": None,
+            return {"found": True, "relaxed": True, "proximity": False, **m}
+        return {"found": False, "relaxed": True, "proximity": False, "place_id_t": None,
                 "coord_t": None, "address_std": None, "address_components_t": []}
 
     def TSA(self, company: str, address_text: str) -> dict:

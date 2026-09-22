@@ -6,16 +6,60 @@
 
 | 서브루틴 | 내용 | 출력 |
 |---|---|---|
-| **G**(query) | Geocoding API 실행 (업체명+주소 결합 문자열을 입력값으로 사용) | `found`, `address_std`(표준화된 주소), `coord_std`(표준 위/경도), `place_id_g`, `address_components_g` |
-| **TS**(업체명, 중심좌표) | 좌표를 중심(locationBias)으로 하는 업체명 기반 TextSearch. 1차 실패 시 반경(locationBias)을 완화하여 1회 재시도 | `found`, `relaxed`(완화 재시도 여부), `place_id_t`, `coord_t`(검색된 업체의 실제 위/경도), `address_components_t` |
+| **G**(query) | Geocoding API 실행 (**주소 문자열만** 입력값으로 사용 — 업체명은 제외) | `found`, `address_std`(표준화된 주소), `coord_std`(표준 위/경도), `place_id_g`, `address_components_g`, **`location_type`**(좌표 정밀도) |
+| **TS**(업체명, 중심좌표, precise) | 좌표를 중심(locationBias)으로 하는 업체명 기반 TextSearch. 1차 실패 시 반경(locationBias)을 완화하여 1회 재시도. **`precise=True`(정밀 지오코딩 좌표)면 이름 매칭 실패 시 좌표 근접 보강(0-1장) 수행** | `found`, `relaxed`(완화 재시도 여부), **`proximity`(좌표 근접 보강 매칭 여부)**, `place_id_t`, `coord_t`(검색된 업체의 실제 위/경도), `address_components_t` |
 | **TSA**(업체명, 주소텍스트) | 좌표 없이 업체명+주소 텍스트를 결합해 TextSearch 실행. 실패 시 주소 레벨을 상위(광역)로 축약하여 1회 재시도 | `found`, `level`(상세/광역), `place_id_t`, `address_components_t` |
 | **CMP**(id_1, id_2, coord_1, coord_2) | 두 후보(place_id, 좌표)를 비교하여 동일 업체 여부 판정 (아래 1장 참고) | `MATCH` / `PROXIMITY_MATCH` / `MISMATCH` |
 | **RG**(좌표) | Reverse Geocoding으로 좌표에 대응하는 주소만 산출 (실재 검증 수단은 아니며, 다른 모든 방법이 실패했을 때의 최후 수단) | `address_rg`, `address_components_rg` |
 | **SIM**(업체명, 후보명) | 비-임베딩 문자열 유사도로 두 업체명이 동일 업체인지 판정 (아래 1-1장 참고) | 유사도 점수 (0~1), `is_match`(임계치 이상 여부) |
 
-> **TS/TSA의 `found` 정의**: `found = True`는 "① Places API가 place_id를 1건 이상 반환" AND "② 반환된 후보의 displayName과 입력 업체명(불용어 제거 기준) 간 `SIM` 유사도가 임계치 이상"을 모두 만족할 때로 정의한다. place_id 존재만으로는 `found = True`로 간주하지 않는다.
+> **G 입력에서 업체명을 제외하는 이유**: Geocoding에 "업체명+주소"를 결합해 넣으면 파서가 상호명 토큰에 이끌려 좌표를 도시 레벨(APPROXIMATE)로 떨어뜨리는 현상이 실측으로 확인되었다. 순수 주소만 입력하면 도로/번지 레벨의 정밀 좌표를 얻을 확률이 높아지므로, G는 주소 문자열만 사용한다. (실재 검증에 필요한 업체명 매칭은 TS/TSA가 담당)
+
+> **G의 `location_type`(좌표 정밀도)**: Geocoding 응답의 `geometry.location_type`으로, 반환 좌표가 얼마나 정밀한지를 나타낸다. `ROOFTOP`/`RANGE_INTERPOLATED`/`GEOMETRIC_CENTER`는 도로·번지 레벨의 **정밀** 좌표, `APPROXIMATE`는 도시·구역 중심의 **부정확** 좌표다. 이 값에 따라 뒤 단계의 거리 게이트·CMP·표준좌표 채택이 분기한다(0-2장 참고).
+
+> **TS/TSA의 `found` 정의**: `found = True`는 "① Places API가 place_id를 1건 이상 반환" AND "② 반환된 후보의 displayName과 입력 업체명(불용어 제거 기준) 간 `SIM` 유사도가 임계치 이상" AND "③ 후보가 실재 업체(POI)일 것 — `locality`/`sublocality`/`political`/`administrative_area_level_N`/`postal_code`/`country` 등 행정구역 타입은 제외"를 모두 만족할 때로 정의한다. place_id 존재만으로는 `found = True`로 간주하지 않는다. (③의 근거: 업체명 접두사가 도시·성 이름과 겹칠 때 — 예 'SUZHOU POSTEL'→'Suzhou' — TextSearch가 도시 자체를 반환하고 SIM이 접두사 유사도로 오매칭하는 것을 차단)
+>
+> **단, TS의 `precise=True` 경로에서는 예외**: 정밀 지오코딩 좌표에 근접한 유일 POI는 ②(SIM 임계치)를 만족하지 못해도 `found=True`로 인정한다(0-1장 좌표 근접 보강). 교차언어 표기 차이로 SIM이 낮은 실재 업체를 좌표로 구제하기 위함이다.
 
 > **addressComponents 확보 원칙**: G/TS/TSA/RG 모두 FieldMask(또는 기본 응답)에 `address_components`/`addressComponents`를 포함해 함께 수신하며, 최종적으로 채택된 위치(서브루틴)의 addressComponents가 그 레코드의 표준 addressComponents로 확정된다. 소스별 스키마 차이는 1-3장의 정규화 매핑을 거쳐 통일된 구조로 저장한다.
+
+---
+
+## 0-1. 좌표 근접 보강 (TS의 `precise` 경로)
+
+업체명 유사도(SIM)만으로는 **교차언어(CJK ↔ 라틴) 표기 차이**를 넘지 못해, 실재하는 업체를 놓치는 문제가 실측으로 확인되었다. Google Places의 `displayName`은 Google이 보유한 표기(현지어 등)로 반환되며 요청 언어(`languageCode`)로 강제 영문화되지 않는다(예: 'LT Metal' 입력 ↔ 'LT메탈 주안공장' 반환, SIM 0.51 / '达成包装制品' 입력 ↔ 'Dacheng Packing Products' 반환, SIM 0.00).
+
+이를 좌표로 우회한다. **G가 정밀 좌표(0-2장)를 반환한 경우, 그 좌표는 곧 "그 주소의 정확한 위치"** 이므로, 다음 조건을 모두 만족하는 후보는 SIM 임계치 미달이어도 실재 업체로 인정한다(`found=True`, `proximity=True`).
+
+```
+좌표 근접 보강 성립 조건:
+  ① G.location_type 이 정밀(APPROXIMATE 아님)      ← 앵커 좌표를 신뢰할 수 있을 때만
+  ② TS 후보(POI) 중 G.coord_std 로부터 근접반경(예: 100m) 이내
+  ③ 그 근접 후보가 유일(1건)                        ← 한 좌표에 복수 POI면 오인 방지
+```
+
+- **근접반경 근거**: 실측상 진짜 업체는 17·27·32m, 이름만 비슷한 오매칭은 22km 이상으로 뚜렷이 갈렸다. 100m는 "같은 부지" 판정에 충분하며, 확정값이 아니라 Golden Dataset으로 튜닝한다.
+- **유일성 조건**: 한 정밀 좌표 반경 내에 여러 업체(예: 복합 빌딩)가 잡히면 어느 것인지 특정할 수 없으므로 보강을 적용하지 않고 일반 경로(SIM 매칭)로만 판정한다.
+- 이 경로로 매칭된 건은 사유코드 `VERIFIED_GEOCODE_PROXIMITY`로 구분 기록한다(5장).
+
+---
+
+## 0-2. Geocoding 정밀도(location_type) 기반 프로세스 분기
+
+G가 반환하는 `location_type`(0장)에 따라, **동일한 Case A/C의 뒤 단계라도 좌표를 신뢰하는 방식이 달라진다.** 도로/번지 주소를 Google이 찾지 못하면 도시·구역 중심을 `APPROXIMATE`로 반환하는데(예: 'FUTE NORTH ROAD…'→'Shanghai', '1 San Qian Road…'→'Suzhou'), 이 부정확한 좌표를 정밀 좌표와 똑같이 취급하면 실재 업체를 놓치거나(재현율 손실) 엉뚱한 판정을 내린다.
+
+| G 정밀도 | 좌표의 의미 | 거리 게이트 | 표준좌표 채택 | Case C의 CMP |
+|---|---|---|---|---|
+| **정밀** (ROOFTOP / RANGE_INTERPOLATED / GEOMETRIC_CENTER) | 도로·번지 레벨로 정확 | **ON** — TS 매칭 POI가 G 좌표에서 게이트 반경(예: 2km)을 벗어나면 이름만 비슷한 **오매칭**으로 보고 무효화 | G.coord_std(정밀) | 정상 수행(G를 대등한 증인으로) |
+| **APPROXIMATE** | 도시·구역 중심(부정확) | **OFF** — 진짜 업체가 도시 중심에서 수 km 떨어진 것이 정상이므로 거리로 거르지 않음 | TS가 찾은 실제 POI 좌표(`coord_t`) | **생략** — G의 place_id/좌표는 "어느 업체인지"의 증인이 될 수 없어 거부권(veto) 박탈 |
+
+**(a) 거리 게이트** — 정밀 G에서만 작동하는 오매칭 차단 장치. 정밀 좌표는 "그 주소의 정확한 위치"이므로, 업체명으로 찾은 TS 결과가 거기서 멀리 떨어져 있으면 이름만 유사한 다른 업체(오매칭)로 판단해 `found`를 무효화한다.
+- 예: 'SUZHOU POSTEL'(G=ROOFTOP, 利达路4号) → TS가 13km 밖 'Suzhou Postal Hub'(postel↔postal 유사) 반환 → 게이트 탈락 → 오매칭 차단, `확인 필요` + 정확한 G 주소 유지.
+
+**(b) APPROXIMATE 시 게이트 OFF + TS 좌표 채택** — G 좌표 자체가 도시 중심이라 앵커로 쓸 수 없으므로, 거리 게이트를 끄고 TS가 찾은 실제 POI의 좌표를 표준좌표로 채택한다.
+- 예: 'Suzhou Kematek'(G=APPROXIMATE, Suzhou 중심) → TS가 17km 밖 실제 Kematek 반환 → 게이트 통과 → `검증 완료`, TS 실좌표 채택.
+
+**(c) APPROXIMATE 시 CMP 거부권 박탈(Case C)** — 4장 2-3 참고. 도시레벨 G의 place_id를 기존좌표 TS 결과와 대등 비교하면 진짜 업체가 `MISMATCH`로 기각되므로, APPROXIMATE면 CMP를 생략하고 기존좌표 TS 결과를 채택한다.
 
 ---
 
@@ -58,7 +102,9 @@ CMP(id_1, id_2, coord_1, coord_2):
 
 ## 1-1. SIM(Similarity) 로직 상세
 
-Places API 응답의 `displayName`이 우리가 가진 업체명과 "동일 업체"로 볼 수 있는지 비-임베딩 방식으로 판정하는 서브루틴. Geocoding/TextSearch 요청·응답은 모두 영문(English)으로 설정하는 것을 전제로 하므로, 스크립트(언어) 불일치로 인한 문자 비교 실패는 고려하지 않는다.
+Places API 응답의 `displayName`이 우리가 가진 업체명과 "동일 업체"로 볼 수 있는지 비-임베딩 방식으로 판정하는 서브루틴.
+
+> **언어(스크립트) 불일치 문제**: 당초 "요청·응답을 모두 영문으로 설정하면 언어 불일치는 없다"고 전제했으나, 실측 결과 **이 전제는 성립하지 않는다.** Google Places의 `displayName`은 Google이 보유한 표기로 반환되며, 요청 언어(`languageCode=en`)로 강제 영문화되지 않는다(예: 'LT Metal'↔'LT메탈 주안공장', '达成包装制品'↔'Dacheng Packing Products'). 따라서 원 언어/표기를 보존한 채 SIM을 계산하되, **교차언어로 SIM이 임계치에 못 미치는 실재 업체는 좌표 근접 보강(0-1장)으로 구제**한다. SIM 알고리즘 자체는 언어 통일을 시도하지 않는다.
 
 **전제**: 두 문자열 모두 비교 전에 아래 정규화를 거친 상태(업체명_STD)라고 가정한다.
 - 소문자 변환
@@ -93,8 +139,8 @@ SIM(업체명_STD, 후보명_STD):
 주소 필드가 영문/현지어 2종으로 각각 존재하는 레코드에 한해, Case A/C의 **1단계(G 실행)를 아래 로직으로 대체**한다. 이는 별도의 "조기 종료" 단계가 아니라 **A/C의 이후 단계(2번 스텝 이하)로 무엇을 들고 진입할지를 결정하는 라우팅**이며, 최종 판정은 반드시 A/C의 나머지 단계를 거친 뒤 확정된다.
 
 ```
-G_local = Geocoding(업체명 + Local 주소)
-G_en    = Geocoding(업체명 + 영문 주소)
+G_local = Geocoding(Local 주소)      ※ 업체명 제외(0장 참고)
+G_en    = Geocoding(영문 주소)        ※ 업체명 제외
 
 (a) 둘 다 성공
     result = CMP(G_local.place_id_g, G_en.place_id_g, G_local.coord_std, G_en.coord_std)
@@ -143,7 +189,7 @@ G/RG(Geocoding API)와 TS/TSA(Places API 신규)는 응답 필드명 체계가 �
 | 유형(분류) | `types` (배열) | `types` (배열) | 필드명·값 체계 동일 → 변환 불필요 |
 | 전체 명칭 | `long_name` | `longText` | 필드명만 상이 |
 | 축약 명칭 | `short_name` | `shortText` | 필드명만 상이 |
-| 언어코드 | 없음 (요청 파라미터로 응답 전체에 암묵 적용) | `languageCode` (컴포넌트별 개별 제공) | 레거시는 요청 시 지정한 언어값으로 대체 |
+| 언어코드 | 없음 (요청 파라미터로 응답 전체에 암묵 적용) | `languageCode` (컴포넌트별 개별 제공) | 응답 언어를 지정하지 않고 원문(현지 표기)으로 수신하므로, Geocoding 측은 응답에 실린 표기 언어를 그대로 기록(없으면 null) |
 
 **공통 스키마**: 소스에 관계없이 아래 구조의 JSON 배열로 통일하여 저장한다.
 
@@ -167,22 +213,29 @@ G/RG(Geocoding API)와 TS/TSA(Places API 신규)는 응답 필드명 체계가 �
    - MISMATCH → Local/영문 각각 아래 "2" 이하를 완주 후 1-2장 [통합 매트릭스]로 최종 판정
    - 둘 다 실패 → 아래 "3. G.found = False"로 진입 (Local/영문 각각 TSA 시도)
 
-1. G = Geocoding(업체명+주소)   ※ 주소가 1개인 레코드에 적용되는 기본 스텝
-   ※ address_components_g 함께 수신 (1-3장 정규화 매핑 적용)
+1. G = Geocoding(주소)   ※ 업체명 제외(0장). 주소가 1개인 레코드에 적용되는 기본 스텝
+   ※ address_components_g, location_type 함께 수신 (1-3장 정규화 매핑 적용)
 
 2. G.found = True
-   2-1. TS = TextSearch(업체명, center = G.coord_std)  ※ address_components_t 함께 수신
-        ※ found = (place_id 존재) AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
-   2-2. TS.found = True  → 표준화: "검증 완료"
+   precise = (G.location_type ≠ APPROXIMATE)     ※ 좌표 정밀 여부(0-2장)
+   2-1. TS = TextSearch(업체명, center = G.coord_std, precise)  ※ address_components_t 함께 수신
+        ※ found = (place_id 존재) AND POI 타입 AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
+        ※ precise=True면 SIM 미달이어도 좌표 근접 유일 POI를 보강 수용(0-1장, proximity=True)
+   2-2. TS.found = True  AND 거리 게이트 통과 → 표준화: "검증 완료"
+        ※ 거리 게이트(0-2a): precise일 때만 적용. TS 매칭 POI가 G 좌표에서 게이트 반경 밖이면 오매칭으로 무효화(→ 2-3)
         - 사유: VERIFIED_GEOCODE_DIRECT (1차 성공) / VERIFIED_GEOCODE_RELAXED (완화 후 성공)
+                / VERIFIED_GEOCODE_PROXIMITY (좌표 근접 보강으로 매칭, 0-1장)
+        - 표준좌표: precise면 G.coord_std, APPROXIMATE면 TS.coord_t 채택(0-2b)
         - place_id 기반 Google Maps URL 제공
-   2-3. TS.found = False → 표준화: "확인 필요"
-        - 사유: UNVERIFIED_NOT_FOUND
-        - 검색 쿼리형 Google Maps URL 제공 (place_id 없음)
+   2-3. TS.found = False (또는 거리 게이트 탈락) → TSA 병행 보강
+        TSA = TextSearchByAddressText(업체명, 주소)  ※ 안전망: 좌표로는 못 찾았으나 주소텍스트로 실재 확인되는 경우 구제
+        - TSA.found = True  → 표준화: "검증 완료" (사유: VERIFIED_TEXTSEARCH_ADDR_TEXT)
+        - TSA.found = False → 표준화: "확인 필요" (사유: UNVERIFIED_NOT_FOUND)
+          · 검색 쿼리형 Google Maps URL 제공 (place_id 없음), address_components_g(상세) 채택
 
 3. G.found = False
    3-1. TSA = TextSearchByAddressText(업체명, 주소)  ※ address_components_t 함께 수신
-        ※ found = (place_id 존재) AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
+        ※ found = (place_id 존재) AND POI 타입 AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
    3-2. TSA.found = True  → 표준화: "검증 완료"
         - 사유: VERIFIED_TEXTSEARCH_ADDR_TEXT
         - place_id 기반 Google Maps URL 제공
@@ -192,6 +245,8 @@ G/RG(Geocoding API)와 TS/TSA(Places API 신규)는 응답 필드명 체계가 �
 ```
 
 **addressComponents 확정 규칙**: 2-2 성공 시 `address_components_t`(TS 결과), 3-2 성공 시 `address_components_t`(TSA 결과)를 최종 채택한다. 2-3(확인 필요)은 `address_components_g`(G 결과)를 잠정 채택하되 비고에 미검증 표기, 3-3(실패)은 값 없음.
+
+**표준 주소 선택 규칙**: 2-2(TS 매칭 성공)의 표준 주소는 TS/G 중 무조건 한쪽이 아니라, **addressComponents 개수가 더 많은(더 상세한) 쪽**을 채택한다. 실재 POI가 등재된 경우 대개 TS가 상세하나(도로+번지), 업체 미등재로 상위 행정구역이 잡히면 G(주소 파싱)가 더 상세할 수 있어 상세도를 기준으로 고른다.
 
 ---
 

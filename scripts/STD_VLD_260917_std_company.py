@@ -52,8 +52,8 @@ INDUSTRY_STOPWORDS = [
 # 저장값에서 제거하는 순서: 긴 것부터(부분 겹침 방지)
 _LEGAL_SORTED = sorted(LEGAL_SUFFIXES, key=len, reverse=True)
 
-# 양끝에서 다듬을 문장부호/구분자
-_TRIM_CHARS = " \t.,·-·（）()㈜、，"
+# 양끝에서 다듬을 문장부호/구분자(괄호는 상호명 내용의 일부이므로 제외)
+_TRIM_CHARS = " \t.,·-·㈜、，"
 
 
 def standardize_company(name: str) -> str:

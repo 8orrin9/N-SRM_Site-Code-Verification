@@ -29,35 +29,102 @@ def _verified_reason(relaxed: bool, direct_code: str, relaxed_code: str) -> str:
     return relaxed_code if relaxed else direct_code
 
 
+# TS 매칭 place가 G 좌표에서 이 거리를 넘으면 좌표 불일치로 보고 found 무효화.
+# TS 1차 locationBias 반경(maps_adapter._bias 2000m)과 동일. 이름만 비슷한 원거리
+# POI 오매칭(예: 'SUZHOU POSTEL'이 13km 밖 'Suzhou Postal Hub'로 매칭)을 차단한다.
+TS_MATCH_GATE_M = 2000.0
+
+
+def _is_approximate(g) -> bool:
+    """G 좌표가 도시·구역 레벨(APPROXIMATE)인지. 이때 좌표는 앵커로 신뢰할 수 없다.
+
+    실측: Google Geocoding은 도로/번지를 못 찾으면 도시 중심을 APPROXIMATE로 반환한다
+    (예: Kematek '1 San Qian Road'→'Suzhou' 도시중심). 이 경우 진짜 업체가 도시 중심에서
+    수 km 떨어져 있는 것이 정상이므로 거리 게이트·CMP에서 좌표를 신뢰하면 정탐을 놓친다.
+    """
+    return (g or {}).get("location_type") == "APPROXIMATE"
+
+
+def _within_gate(g_coord, ts_coord, radius_m=TS_MATCH_GATE_M, *, approximate=False):
+    """TS 매칭 place가 G 좌표 반경 내인지.
+
+    - 좌표가 없으면 판단 불가로 통과.
+    - G가 APPROXIMATE(도시레벨)이면 좌표 앵커가 부정확하므로 거리 게이트를 적용하지
+      않는다(먼 매칭이 오히려 정상). G가 정밀할 때만 원거리 오매칭을 차단한다.
+    """
+    if approximate:
+        return True
+    if not g_coord or not ts_coord or ts_coord[0] is None:
+        return True
+    return gc.haversine(g_coord, ts_coord) <= radius_m
+
+
+def _pick_std_address(ts_addr, ts_comps, g_addr, g_comps):
+    """TS 매칭 성공 leaf의 표준 주소 선택. TS/G 주소 중 addressComponents가
+    더 많은(더 상세한) 쪽을 채택하되, 동수이면 TS(매칭된 place)를 우선한다.
+
+    실제 POI가 등재된 경우 TS가 상세하나(예: 도로+번지), 업체 미등재로 상위
+    행정구역이 잡히면 G(주소 파싱)가 더 상세할 수 있다.
+    """
+    if not ts_addr:
+        return g_addr
+    if not g_addr:
+        return ts_addr
+    if len(g_comps or []) > len(ts_comps or []):
+        return g_addr
+    return ts_addr
+
+
 # ---------------------------------------------------------------------------
 # Case A — 주소 + 업체명
 # ---------------------------------------------------------------------------
 def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.VerifyResult:
     disp = company_disp or company_std
-    g = adapter.G(f"{company_std} {addr_text}")
+    g = adapter.G(addr_text)  # 주소만 지오코딩(업체명 결합은 파싱을 흐려 도시레벨로 떨어뜨림)
 
     if g["found"]:
-        ts = adapter.TS(company_std, g["coord_std"])
-        if ts["found"]:
-            code = _verified_reason(ts["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
-                                    gc.VERIFIED_GEOCODE_RELAXED)
+        approx = _is_approximate(g)
+        ts = adapter.TS(company_std, g["coord_std"], precise=not approx)
+        if ts["found"] and _within_gate(g["coord_std"], ts["coord_t"], approximate=approx):
+            if ts.get("proximity"):
+                code = gc.VERIFIED_GEOCODE_PROXIMITY
+            else:
+                code = _verified_reason(ts["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
+                                        gc.VERIFIED_GEOCODE_RELAXED)
+            # G가 APPROXIMATE면 좌표 앵커가 부정확하므로 TS가 찾은 실제 POI 좌표를 채택.
+            std_coord = ts["coord_t"] if approx else g["coord_std"]
             return make_result(
                 code, note="지오코딩 성공, 표준좌표 기준 TextSearch 매칭"
-                + ("(반경 완화)" if ts["relaxed"] else ""),
-                std_address=g["address_std"],
-                std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
+                + ("(반경 완화)" if ts["relaxed"] else "")
+                + ("(정밀좌표 근접 POI 수용: 업체명 표기 상이)" if ts.get("proximity") else "")
+                + ("(G 도시레벨→TS 좌표 채택)" if approx else ""),
+                std_address=_pick_std_address(
+                    ts.get("address_std"), ts["address_components_t"],
+                    g["address_std"], g["address_components_g"]),
+                std_lat=std_coord[0], std_lon=std_coord[1],
                 place_id=ts["place_id_t"], reference_url=_place_url(ts["place_id_t"]),
                 address_components=ts["address_components_t"],
                 method_trace=["G", "TS"])
-        # TS 미발견 → 확인 필요(G 결과 잠정 채택)
+
+        # TS 미발견 또는 게이트 탈락(원거리 오매칭) → 업체명+주소텍스트 TSA로 재검증(병행 보강)
+        tsa = adapter.TSA(company_std, addr_text)
+        if tsa["found"]:
+            return make_result(
+                gc.VERIFIED_TEXTSEARCH_ADDR_TEXT,
+                note=f"표준좌표 TextSearch 미매칭, 업체명+주소텍스트 TextSearch로 매칭(레벨 L{tsa['level']})",
+                std_address=tsa.get("address_std"),
+                place_id=tsa["place_id_t"], reference_url=_place_url(tsa["place_id_t"]),
+                address_components=tsa["address_components_t"],
+                method_trace=["G", "TS", "TSA"])
+        # 최종 미발견 → 확인 필요(상세한 G 주소 채택)
         return make_result(
             gc.UNVERIFIED_NOT_FOUND,
-            note="지오코딩은 성공했으나 표준좌표 기준 TextSearch에서 업체 미발견",
+            note="지오코딩은 성공했으나 TextSearch(좌표·주소텍스트)에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
             reference_url=_query_url(disp, addr_text),
             address_components=g["address_components_g"],
-            method_trace=["G", "TS"])
+            method_trace=["G", "TS", "TSA"])
 
     # G 실패 → TSA
     tsa = adapter.TSA(company_std, addr_text)
@@ -110,16 +177,23 @@ def verify_case_B(company_std, coord, adapter, *, company_disp=None) -> gc.Verif
 def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.VerifyResult:
     """G.found = True 이후의 Case C 서브트리(문서 4장 2번)."""
     dist = gc.haversine(g["coord_std"], coord)
+    approx = _is_approximate(g)
 
     if dist <= CMP_TOLERANCE_M:  # 2-2 위치 정합
-        ts = adapter.TS(company_std, g["coord_std"])
-        if ts["found"]:
-            code = _verified_reason(ts["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
-                                    gc.VERIFIED_GEOCODE_RELAXED)
+        ts = adapter.TS(company_std, g["coord_std"], precise=not approx)
+        if ts["found"] and _within_gate(g["coord_std"], ts["coord_t"], approximate=approx):
+            if ts.get("proximity"):
+                code = gc.VERIFIED_GEOCODE_PROXIMITY
+            else:
+                code = _verified_reason(ts["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
+                                        gc.VERIFIED_GEOCODE_RELAXED)
             return make_result(
                 code, note="표준·기존 좌표 정합, 표준좌표 TextSearch 매칭"
-                + ("(반경 완화)" if ts["relaxed"] else ""),
-                std_address=g["address_std"],
+                + ("(반경 완화)" if ts["relaxed"] else "")
+                + ("(정밀좌표 근접 POI 수용: 업체명 표기 상이)" if ts.get("proximity") else ""),
+                std_address=_pick_std_address(
+                    ts.get("address_std"), ts["address_components_t"],
+                    g["address_std"], g["address_components_g"]),
                 std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
                 place_id=ts["place_id_t"], reference_url=_place_url(ts["place_id_t"]),
                 address_components=ts["address_components_t"],
@@ -136,6 +210,19 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
     # 2-3 위치 불일치 → 기존좌표 TS_old
     ts_old = adapter.TS(company_std, coord)
     if ts_old["found"]:
+        # G가 APPROXIMATE(도시레벨)면 G의 place_id/좌표는 '어느 업체인지'의 증인이 될 수
+        # 없다(도시 중심일 뿐). CMP 거부권을 박탈하고 기존좌표 TS가 찾은 실제 POI를 채택.
+        if approx:
+            code = _verified_reason(ts_old["relaxed"], gc.VERIFIED_COORD_DIRECT,
+                                    gc.VERIFIED_COORD_RELAXED)
+            return make_result(
+                code, note="지오코딩이 도시레벨(부정확)이라 위치비교 생략, 기존좌표 TextSearch 매칭"
+                + ("(반경 완화)" if ts_old["relaxed"] else ""),
+                std_address=ts_old.get("address_std"),
+                std_lat=ts_old["coord_t"][0], std_lon=ts_old["coord_t"][1],
+                place_id=ts_old["place_id_t"], reference_url=_place_url(ts_old["place_id_t"]),
+                address_components=ts_old["address_components_t"],
+                method_trace=["G(approx)", "TS_old"])
         result = gc.CMP(g["place_id_g"], ts_old["place_id_t"],
                         g["coord_std"], ts_old["coord_t"])
         if result in ("MATCH", "PROXIMITY_MATCH"):
@@ -162,15 +249,23 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
             method_trace=["G", "TS_old", "CMP"])
 
     # TS_old 실패 → 표준좌표 TS_std
-    ts_std = adapter.TS(company_std, g["coord_std"])
-    if ts_std["found"]:
-        code = _verified_reason(ts_std["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
-                                gc.VERIFIED_GEOCODE_RELAXED)
+    ts_std = adapter.TS(company_std, g["coord_std"], precise=not approx)
+    if ts_std["found"] and _within_gate(g["coord_std"], ts_std["coord_t"], approximate=approx):
+        if ts_std.get("proximity"):
+            code = gc.VERIFIED_GEOCODE_PROXIMITY
+        else:
+            code = _verified_reason(ts_std["relaxed"], gc.VERIFIED_GEOCODE_DIRECT,
+                                    gc.VERIFIED_GEOCODE_RELAXED)
+        std_coord = ts_std["coord_t"] if approx else g["coord_std"]
         return make_result(
             code, note="기존좌표 TextSearch 실패, 표준좌표 TextSearch로 매칭(기존좌표 신뢰도 낮음)"
-            + ("(반경 완화)" if ts_std["relaxed"] else ""),
-            std_address=g["address_std"],
-            std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
+            + ("(반경 완화)" if ts_std["relaxed"] else "")
+            + ("(정밀좌표 근접 POI 수용: 업체명 표기 상이)" if ts_std.get("proximity") else "")
+            + ("(G 도시레벨→TS 좌표 채택)" if approx else ""),
+            std_address=_pick_std_address(
+                ts_std.get("address_std"), ts_std["address_components_t"],
+                g["address_std"], g["address_components_g"]),
+            std_lat=std_coord[0], std_lon=std_coord[1],
             place_id=ts_std["place_id_t"], reference_url=_place_url(ts_std["place_id_t"]),
             address_components=ts_std["address_components_t"],
             method_trace=["G", "TS_old", "TS_std"])
@@ -226,7 +321,7 @@ def verify_case_C(company_std, addr_en, addr_local, coord, adapter,
         return _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter)
 
     addr_text = addr_en or addr_local
-    g = adapter.G(f"{company_std} {addr_text}")
+    g = adapter.G(addr_text)  # 주소만 지오코딩(업체명 결합은 파싱을 흐려 도시레벨로 떨어뜨림)
     if g["found"]:
         return _case_C_with_G(company_std, disp, addr_text, coord, g, adapter)
     return _case_C_g_failed(company_std, disp, addr_text, coord, adapter)
@@ -237,8 +332,8 @@ def verify_case_C(company_std, addr_en, addr_local, coord, adapter,
 # ---------------------------------------------------------------------------
 def _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter) -> gc.VerifyResult:
     """Case C에서 영문/현지어 주소가 모두 존재할 때의 라우팅."""
-    g_local = adapter.G(f"{company_std} {addr_local}")
-    g_en = adapter.G(f"{company_std} {addr_en}")
+    g_local = adapter.G(addr_local)  # 주소만 지오코딩(업체명 결합은 파싱을 흐림)
+    g_en = adapter.G(addr_en)
 
     both = g_local["found"] and g_en["found"]
     if both:
