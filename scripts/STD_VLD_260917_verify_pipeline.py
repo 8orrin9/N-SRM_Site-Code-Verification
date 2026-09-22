@@ -122,7 +122,7 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.V
             note="지오코딩은 성공했으나 TextSearch(좌표·주소텍스트)에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, addr_text),
+            reference_url=_query_url(disp, g["address_std"]),
             address_components=g["address_components_g"],
             method_trace=["G", "TS", "TSA"])
 
@@ -203,7 +203,7 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
             note="표준·기존 좌표는 정합하나 TextSearch에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, addr_text),
+            reference_url=_query_url(disp, g["address_std"]),
             address_components=g["address_components_g"],
             method_trace=["G", "TS"])
 
@@ -244,7 +244,7 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
             note="표준·기존 좌표에서 서로 다른 업체 발견 → 동명이업체/위치오류 의심(두 후보 제시)",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, addr_text),
+            reference_url=_query_url(disp, g["address_std"]),
             address_components=both,
             method_trace=["G", "TS_old", "CMP"])
 
@@ -274,7 +274,7 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
         note="표준·기존 좌표 모두 TextSearch에서 업체 미발견",
         std_address=g["address_std"],
         std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-        reference_url=_query_url(disp, addr_text),
+        reference_url=_query_url(disp, g["address_std"]),
         address_components=g["address_components_g"],
         method_trace=["G", "TS_old", "TS_std"])
 
