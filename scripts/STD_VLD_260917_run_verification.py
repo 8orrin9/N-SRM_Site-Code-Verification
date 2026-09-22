@@ -28,8 +28,8 @@ import STD_VLD_260917_verify_pipeline as vp  # noqa: E402
 from STD_VLD_260917_maps_adapter import make_adapter  # noqa: E402
 from STD_VLD_260917_std_company import standardize_company  # noqa: E402
 
-IN_PATH = os.path.join(ROOT, "data", "html_260908_site_master.csv")
-OUT_PATH = os.path.join(ROOT, "data", "STD_VLD_260917_site_master_std.csv")
+IN_PATH = os.path.join(ROOT, "data", "STD_VLD_260917_site_master_light.csv")
+OUT_PATH = os.path.join(ROOT, "data", "STD_VLD_260917_site_master_light_std.csv")
 
 # 원본 컬럼(순서 유지)
 BASE_COLUMNS = [
@@ -119,7 +119,7 @@ def main(argv=None) -> int:
     parser.add_argument("--limit", type=int, default=None, help="처리 행 수 제한")
     args = parser.parse_args(argv)
 
-    mode = args.mode or os.getenv("MAPS_ADAPTER_MODE", "mock")
+    mode = args.mode or os.getenv("MAPS_ADAPTER_MODE", "real")
     adapter = make_adapter(mode, api_key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
     with open(args.in_path, encoding="utf-8-sig", newline="") as f:
