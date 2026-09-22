@@ -279,36 +279,42 @@ G/RG(Geocoding API)와 TS/TSA(Places API 신규)는 응답 필드명 체계가 �
    - MISMATCH → Local/영문 각각 아래 "2" 이하를 완주 후 1-2장 [통합 매트릭스]로 최종 판정
    - 둘 다 실패 → 아래 "3. G.found = False"로 진입 (Local/영문 각각 TSA 시도)
 
-1. G = Geocoding(업체명+주소)   ※ 주소가 1개인 레코드에 적용되는 기본 스텝
-   ※ address_components_g 함께 수신
+1. G = Geocoding(주소)   ※ 업체명 제외(0장). 주소가 1개인 레코드에 적용되는 기본 스텝
+   ※ address_components_g, location_type 함께 수신
 
 2. G.found = True
+   precise = (G.location_type ≠ APPROXIMATE)     ※ 좌표 정밀 여부(0-2장)
    2-1. dist = Haversine(G.coord_std, 기존좌표)
 
    2-2. dist ≤ 허용범위 (위치 정합)
-        TS = TextSearch(업체명, center = G.coord_std)  ※ address_components_t 함께 수신
-        ※ found = (place_id 존재) AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
-        - TS.found = True  → 표준화: "검증 완료"
-          사유: VERIFIED_GEOCODE_DIRECT / VERIFIED_GEOCODE_RELAXED
-        - TS.found = False → 표준화: "확인 필요"
+        TS = TextSearch(업체명, center = G.coord_std, precise)  ※ address_components_t 함께 수신
+        ※ found = (place_id 존재) AND POI 타입 AND SIM ≥ 임계치 (precise면 좌표 근접 보강 포함, 0-1장)
+        - TS.found = True AND 거리 게이트 통과 → 표준화: "검증 완료"
+          사유: VERIFIED_GEOCODE_DIRECT / VERIFIED_GEOCODE_RELAXED / VERIFIED_GEOCODE_PROXIMITY
+        - TS.found = False (또는 게이트 탈락) → 표준화: "확인 필요"
           사유: UNVERIFIED_NOT_FOUND
 
    2-3. dist > 허용범위 (위치 불일치)
         TS_old = TextSearch(업체명, center = 기존좌표)  ※ address_components_t 함께 수신
-        ※ found = (place_id 존재) AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
+        ※ found = (place_id 존재) AND POI 타입 AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
 
         - TS_old.found = True
-          result = CMP(G.place_id_g, TS_old.place_id_t, G.coord_std, TS_old.coord_t)
+          [G가 APPROXIMATE인 경우] → CMP 생략(거부권 박탈, 0-2c) → 표준화: "검증 완료"
+            · 도시레벨 G의 place_id는 '어느 업체인지'의 증인이 될 수 없으므로 비교하지 않고,
+              기존좌표 TS_old가 찾은 실제 POI를 채택(TS_old.coord_t / address_components_t)
+            · 사유: VERIFIED_COORD_DIRECT / VERIFIED_COORD_RELAXED
+          [G가 정밀인 경우] → result = CMP(G.place_id_g, TS_old.place_id_t, G.coord_std, TS_old.coord_t)
           - result = MATCH 또는 PROXIMITY_MATCH → 표준화: "검증 완료" (표준좌표 채택, address_components_g 채택)
             사유: VERIFIED_PLACEID_MATCH / VERIFIED_PROXIMITY_MATCH
           - result = MISMATCH → 표준화: "확인 필요" (표준·기존 두 후보의 addressComponents 모두 제시)
             사유: UNVERIFIED_PLACEID_MISMATCH
 
         - TS_old.found = False
-          TS_std = TextSearch(업체명, center = G.coord_std)  ※ 2-2에서 미실행 시 여기서 수행, address_components_t 함께 수신
-          ※ found = (place_id 존재) AND SIM(업체명_STD, 후보명_STD).is_match ≥ 임계치
-          - TS_std.found = True  → 표준화: "검증 완료" (기존좌표 신뢰도 낮음, 로그 기록. address_components_g 채택)
-            사유: VERIFIED_GEOCODE_DIRECT / VERIFIED_GEOCODE_RELAXED
+          TS_std = TextSearch(업체명, center = G.coord_std, precise)  ※ 2-2에서 미실행 시 여기서 수행, address_components_t 함께 수신
+          ※ found = (place_id 존재) AND POI 타입 AND SIM ≥ 임계치 (precise면 좌표 근접 보강 포함, 0-1장)
+          - TS_std.found = True AND 거리 게이트 통과 → 표준화: "검증 완료" (기존좌표 신뢰도 낮음, 로그 기록)
+            · 표준좌표: precise면 G.coord_std, APPROXIMATE면 TS_std.coord_t 채택(0-2b)
+            사유: VERIFIED_GEOCODE_DIRECT / VERIFIED_GEOCODE_RELAXED / VERIFIED_GEOCODE_PROXIMITY
           - TS_std.found = False → 표준화: "확인 필요"
             사유: UNVERIFIED_NOT_FOUND
 
@@ -342,13 +348,14 @@ G/RG(Geocoding API)와 TS/TSA(Places API 신규)는 응답 필드명 체계가 �
 |---|---|---|---|---|---|---|---|
 | 검증 완료 | `VERIFIED_GEOCODE_DIRECT` | A, C | O | O | | 지오코딩 성공, 표준좌표 기준 TextSearch 1차 시도에서 업체 매칭 | 조치 불필요 — 표준값 그대로 site_db_std에 반영 |
 | 검증 완료 | `VERIFIED_GEOCODE_RELAXED` | A, C | O | O | | 지오코딩 성공, 표준좌표 기준 TextSearch가 반경 완화 후 매칭 | 조치 불필요 — 단, 완화 재시도 건이므로 일부 샘플을 무작위 추출해 품질 점검 권장 |
+| 검증 완료 | `VERIFIED_GEOCODE_PROXIMITY` | A, C | O | O | 업체명 유사도(SIM)는 임계치 미달이나 정밀 좌표 근접으로 실재 확인 | 지오코딩이 정밀 좌표(비-APPROXIMATE)를 반환하고, 그 좌표 근접반경 내 유일 POI가 존재 → 교차언어 등 표기 차이로 이름은 안 맞아도 '그 주소에 있는 업체'로 판단(0-1장) | 조치 불필요 — 단, 이름 유사도가 아닌 위치로 판정한 건이므로 일부 샘플을 추출해 업체명 대응 관계 점검 권장 |
 | 검증 완료 | `VERIFIED_COORD_DIRECT` | B, C | O | O | 표준주소는 TS 결과에서 확보(G 미사용) | 지오코딩 없이(또는 실패), 기존좌표 기준 TextSearch 1차 시도에서 매칭 | 조치 불필요 — 표준값 그대로 site_db_std에 반영 |
 | 검증 완료 | `VERIFIED_COORD_RELAXED` | B, C | O | O | 표준주소는 TS 결과에서 확보(G 미사용) | 기존좌표 기준 TextSearch가 반경 완화 후 매칭 | 조치 불필요 — 단, 완화 재시도 건이므로 일부 샘플을 무작위 추출해 품질 점검 권장 |
 | 검증 완료 | `VERIFIED_TEXTSEARCH_ADDR_TEXT` | A, C | O | O | 표준주소는 TSA 결과에서 확보(G 실패) | 지오코딩 실패, 업체명+주소 텍스트 결합 TextSearch로 매칭 (주소 레벨 축약 포함) | 조치 불필요 — 단, 지오코딩이 실패했던 원본 주소 자체는 별도로 품질 개선 검토 권장 |
 | 검증 완료 | `VERIFIED_PLACEID_MATCH` | C | O | O | | 표준·기존 좌표는 불일치했으나, 두 TextSearch 결과의 place_id가 동일 → 좌표 오차로 판단 | 조치 불필요 — 기존 좌표값 오류 가능성을 로그로만 남김 |
 | 검증 완료 | `VERIFIED_PROXIMITY_MATCH` | C | O | O | | place_id는 다르지만 두 결과의 위치 간 거리가 허용범위 이내 → 동일 부지로 판단 | 조치 불필요 — 단, place_id 체계 차이로 자동 판정된 건이므로 일부 샘플 점검 권장 |
 | 검증 완료 | `VERIFIED_ADDRESS_SOURCE_RESOLVED` | A, C | O | O | | 영문/현지어 주소를 각각 완주 검증한 결과, 두 후보 모두 검증 완료되었고 place_id도 동일/근접 → 표준으로 합의(Local 우선 채택) | 조치 불필요 — 표준값 그대로 site_db_std에 반영 |
-| 확인 필요 | `UNVERIFIED_NOT_FOUND` | A, C | O | X | G(또는 TS_std)는 성공했으나 TS가 업체를 못 찾음 | 표준(또는 기존)좌표 기준 TextSearch를 반경 완화까지 포함해 시도했으나 업체 미발견 | 담당자가 제공된 검색 쿼리형 URL로 Google Maps에서 직접 검색해 업체 실재 여부 수동 확인 |
+| 확인 필요 | `UNVERIFIED_NOT_FOUND` | A, C | O | X | G(또는 TS_std)는 성공했으나 TS가 업체를 못 찾음 | 표준(또는 기존)좌표 기준 TextSearch를 반경 완화·좌표 근접 보강까지 포함해 시도하고(Case A는 업체명+주소텍스트 TSA 병행 보강까지) 모두 업체 미발견. 대개 Google Places에 해당 업체가 POI로 미등재된 경우 | 담당자가 제공된 검색 쿼리형 URL로 Google Maps에서 직접 검색해 업체 실재 여부 수동 확인 |
 | 확인 필요 | `UNVERIFIED_PLACEID_MISMATCH` | C | O | O(충돌) | 실재검증 자체는 성공(TS_old가 업체를 찾음)했으나, G와 다른 업체로 판정되어 충돌 | 표준·기존 좌표 각각에서 서로 다른 업체(place_id)가 발견됨 → 동명이업체/위치오류 의심 | 담당자가 제시된 두 후보(표준좌표 후보 / 기존좌표 후보) 중 실제 업체를 직접 선택 |
 | 확인 필요 | `UNVERIFIED_REVERSE_GEOCODE_ONLY` | B, C | O | X | RG는 표준화만 수행, 업체명 매칭이 없어 실재검증 불가 | 지오코딩·TextSearch 모두 실패, Reverse Geocoding으로 주소만 최소 확보 (실재 검증 불가) | 담당자가 처음부터 수동으로 업체 실재 여부를 확인 (자동 검증 근거 전무) |
 | 확인 필요 | `UNVERIFIED_ADDRESS_SOURCE_CONFLICT` | A, C | O | O 또는 X (경로별 상이) | 둘 다 검증완료 후 place_id 충돌 시 실재검증 O(충돌) / 둘 다 미검증 시 실재검증 X | 영문/현지어 주소를 각각 완주 검증했으나, (양쪽 다 검증 완료이면서 place_id 상이) 또는 (양쪽 다 확인 필요) → 두 후보(및 원인) 모두 제시 | 담당자가 제시된 영문/현지어 두 후보 중 어느 쪽이 맞는지, 혹은 서로 다른 Site인지 확인 |
