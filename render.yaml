@@ -7,6 +7,6 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: MAPS_ADAPTER_MODE
-        value: mock
+        value: real
       - key: GOOGLE_MAPS_API_KEY
         sync: false
