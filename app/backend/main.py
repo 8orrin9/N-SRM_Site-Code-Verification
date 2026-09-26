@@ -10,6 +10,7 @@ import deps  # noqa: F401  (sys.path + .env 부트스트랩; 최우선 import)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from routers import dedup, similarity, standardize, tables, upload
 
@@ -34,3 +35,10 @@ app.include_router(similarity.router)
 @app.get("/api/health")
 def health():
     return {"ok": True, "adapter_mode": os.getenv("MAPS_ADAPTER_MODE", "real")}
+
+
+# 프론트 정적 export(out/) 서빙 — 반드시 모든 /api 라우터 include 이후에 마운트한다.
+# 로컬 개발(out 미빌드)에서는 마운트를 건너뛰어 기존 8000 API-only 동작을 유지한다.
+_OUT = os.path.join(deps.ROOT, "app", "frontend", "out")
+if os.path.isdir(_OUT):
+    app.mount("/", StaticFiles(directory=_OUT, html=True), name="static")

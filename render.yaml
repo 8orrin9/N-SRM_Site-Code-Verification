@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: n-srm-site-verification
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: MAPS_ADAPTER_MODE
+        value: mock
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false

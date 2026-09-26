@@ -3,7 +3,7 @@ import type {
   DedupResult, DedupThresholds, QueryResult, SavedTable, SiteRow, TableMeta,
 } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {

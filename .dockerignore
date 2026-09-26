@@ -1,0 +1,26 @@
+# 파이썬
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next
+node_modules/
+app/frontend/node_modules/
+.next/
+app/frontend/.next/
+out/
+app/frontend/out/
+
+# 로컬 환경변수(빌드에 stale 값이 구워지지 않게)
+.env
+.env.local
+.env.*.local
+app/frontend/.env
+app/frontend/.env.local
+
+# 배포에 불필요
+.git/
+data/
+documents/
+*.md
