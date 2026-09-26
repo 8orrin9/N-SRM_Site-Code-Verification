@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N-SRM · Site 표준화/중복/유사 검색 서비스 (프로토타입)</title>
+<style>
+  :root {
+    --blue: #0e1650;
+    --blue-dark: #0d1c73;
+    --blue-soft: #eef1fb;
+    --blue-line: #c7d0f0;
+    --std-accent: #0e1650;
+    --std-tint: #f0f2fa;
+    --text: #222;
+    --text-sub: #666;
+    --line: #e0e0e0;
+    --bg: #f4f5f7;
+    --grp-sub: #eef4fb;
+    --grp-rec: #fdf3ec;
+    --ok: #1a7f37;
+    --warn: #b26a00;
+    --danger: #c0392b;
+    --gray: #667085;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Malgun Gothic", "Segoe UI", "Meiryo", "Microsoft YaHei", system-ui, sans-serif;
+    color: var(--text); background: var(--bg); font-size: 13px; line-height: 1.45;
+  }
+
+  /* ---------- GNB ---------- */
+  header.gnb { background: #fff; border-bottom: 1px solid var(--line); }
+  .gnb-top {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px; padding: 0 24px; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .samsung-mark { font-family: Arial, sans-serif; font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px; color: #000; }
+  .nsrm-logo { display: flex; align-items: center; padding-left: 16px; border-left: 1px solid var(--line); }
+  .nsrm-mark { font-family: Arial, "Segoe UI", sans-serif; font-size: 21px; font-weight: 800;
+    letter-spacing: -0.5px; color: #000; line-height: 1; }
+  .gnb-menu { display: flex; padding: 0 16px; }
+  .gnb-menu button {
+    appearance: none; border: 0; background: none; padding: 14px 20px;
+    font-size: 15px; font-weight: 600; color: var(--text-sub); cursor: pointer;
+    border-bottom: 3px solid transparent; font-family: inherit;
+  }
+  .gnb-menu button:hover { color: var(--blue); }
+  .gnb-menu button.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* ---------- Page ---------- */
+  main { padding: 18px 24px 60px; }
+  .page-title { font-size: 18px; font-weight: 700; margin: 0 0 3px; }
+  .page-sub { color: var(--text-sub); margin: 0 0 14px; font-size: 12.5px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    height: 32px; padding: 0 14px; border-radius: 4px; cursor: pointer;
+    font-size: 12.5px; font-family: inherit; font-weight: 600;
+    border: 1px solid var(--blue); background: #fff; color: var(--blue);
+  }
+  .btn:hover { background: var(--blue-soft); }
+  .btn.primary { background: var(--blue); color: #fff; }
+  .btn.primary:hover { background: var(--blue-dark); }
+  .btn.ghost { border-color: #ccc; color: var(--text-sub); }
+  .btn.ghost:hover { background: #f2f2f2; }
+  .btn.sm { height: 26px; padding: 0 9px; font-size: 11.5px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ---------- Two-pane layout (좌/우 + 비율 애니메이션 + 드래그 리사이즈) ---------- */
+  .twopane { display: flex; gap: 0; align-items: stretch; }
+  .pane { min-width: 0; display: flex; flex-direction: column;
+    transition: flex-grow .55s cubic-bezier(.4,0,.2,1); }
+  .pane-left  { flex: 7 1 0; }
+  .pane-right { flex: 3 1 0; }
+  .twopane.no-anim .pane { transition: none; }
+  /* 드래그로 좌우 비율을 조절하는 구분선 */
+  .splitter { flex: 0 0 16px; align-self: stretch; cursor: col-resize; position: relative; }
+  .splitter::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7px; width: 2px;
+    background: var(--line); border-radius: 2px; transition: background .15s, width .15s; }
+  .splitter:hover::before, .splitter.active::before { background: var(--blue); width: 4px; left: 6px; }
+  .splitter::after { content: "⋮"; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); color: var(--text-sub); font-size: 14px; line-height: 1; }
+  .splitter:hover::after, .splitter.active::after { color: var(--blue); }
+  .pane-box { background: #fff; border: 1px solid var(--line); border-radius: 6px;
+    display: flex; flex-direction: column; height: 100%; position: relative; overflow: hidden; }
+  .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); background: #fafbfc; }
+  .pane-head .ph-title { font-weight: 700; font-size: 13.5px; color: var(--blue); }
+  .pane-head .ph-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pane-body { padding: 12px 14px; overflow: auto; flex: 1; min-height: 320px; }
+  .pane-note { font-size: 12px; color: var(--text-sub); margin: 0 0 10px; }
+
+  /* ---------- Upload / manual entry ---------- */
+  .drop {
+    border: 2px dashed var(--blue-line); border-radius: 8px; padding: 26px 16px;
+    text-align: center; color: var(--text-sub); background: #fafbff; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .drop:hover { background: var(--blue-soft); border-color: var(--blue); }
+  .drop .big { font-size: 30px; margin-bottom: 6px; }
+  .drop b { color: var(--blue); }
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--text-sub);
+    font-size: 11.5px; margin: 16px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; }
+  .manual-grid .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11.5px; color: var(--text-sub); font-weight: 600; }
+  .field input, .field select {
+    height: 30px; border: 1px solid #ccc; border-radius: 4px; padding: 0 8px;
+    font-size: 12.5px; font-family: inherit; background: #fff; width: 100%;
+  }
+  .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+  /* ---------- Saved table list (좌측) ---------- */
+  .tbl-list { display: flex; flex-direction: column; gap: 6px; }
+  .tbl-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+  .tbl-item:hover { background: #f4f8ff; }
+  .tbl-item.sel { border-color: var(--blue); background: var(--blue-soft); }
+  .tbl-item input { width: 15px; height: 15px; }
+  .tbl-item .ti-main { font-weight: 700; color: var(--text); }
+  .tbl-item .ti-sub { color: var(--text-sub); font-size: 11.5px; margin-left: auto; }
+  .list-actions { display: flex; gap: 6px; margin: 10px 0 4px; }
+
+  /* ---------- Table ---------- */
+  .table-wrap { border: 1px solid var(--line); border-radius: 6px; overflow: auto; max-height: 56vh; }
+  table.grid { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 12px; }
+  table.grid th, table.grid td {
+    border: 1px solid #e6e6e6; padding: 4px 8px; white-space: nowrap; text-align: center; }
+  table.grid thead th { position: sticky; top: 0; background: #f7f8fa; font-weight: 700;
+    color: #333; z-index: 2; height: 32px; }
+  table.grid thead th.g-sub { background: var(--grp-sub); color: var(--blue-dark); }
+  table.grid thead th.g-rec { background: var(--grp-rec); color: #8a4b1f; }
+  table.grid td.c-sub { background: #f6f9fd; }
+  table.grid td.c-rec { background: #fdf7f2; font-weight: 600; }
+  table.grid tbody tr:hover td { background: #f0f6ff; }
+  table.grid tbody tr.sel td { background: #eaf1ff; }
+  table.grid td.editable { cursor: text; }
+  table.grid td.editable:focus { outline: 2px solid var(--blue); background: #fff; }
+  table.grid td.addr { text-align: left; max-width: 260px; white-space: normal; }
+  table.grid th.std-col { background: var(--std-tint); color: var(--std-accent); }
+  table.grid td.std-cell { background: #f9fafc; }
+  table.grid td.std-cell.just-filled { animation: stdflash 1s ease; }
+  @keyframes stdflash { from { background: #cdd5f2; } to { background: #f9fafc; } }
+  .row-chk { width: 15px; height: 15px; cursor: pointer; }
+  .row-del { color: var(--danger); cursor: pointer; font-weight: 700; }
+  .row-del:hover { color: #7d241a; }
+  .tbl-toolbar { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+  .tbl-toolbar .count { margin-left: auto; font-size: 11.5px; color: var(--text-sub); }
+
+  /* ---------- Status badge ---------- */
+  .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    font-weight: 600; cursor: pointer; user-select: none; }
+  .s-검증완료 { background: var(--blue); color: #e7effc; }
+  .s-확인필요 { background: #fdecea; color: var(--danger); }
+  .s-실패 { background: #f0f0f0; color: var(--gray); cursor: default; }
+  .ref-link { color: var(--blue); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .ref-link:hover { text-decoration: underline; }
+
+  /* ---------- Similarity badge ---------- */
+  .avg-badge { display: inline-block; min-width: 54px; padding: 2px 6px; border-radius: 10px;
+    font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; font-size: 11.5px; }
+  .avg-hi { background: #c0392b; }
+  .avg-mid { background: #e08a00; }
+  .avg-lo { background: #6b7280; }
+  .simcell { font-variant-numeric: tabular-nums; color: var(--gray); font-size: 11px; }
+
+  /* ---------- Cluster cards (중복) ---------- */
+  .clu { border: 1px solid var(--blue-line); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+  .clu-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+    background: var(--blue-soft); border-bottom: 1px solid var(--blue-line); }
+  .clu-title { font-weight: 700; color: var(--blue); font-size: 13px; }
+  .clu-title span { font-weight: 400; color: var(--text-sub); }
+  .clu-reason { margin-left: auto; font-size: 11px; color: var(--text-sub); }
+  .clu-body { padding: 6px 10px; }
+  .clu-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px;
+    border-bottom: 1px solid #eef0f2; font-size: 12.5px; }
+  .clu-row:last-child { border-bottom: none; }
+  .clu-row.is-rep { background: var(--std-tint); border-radius: 6px; }
+  .clu-row input[type=radio] { width: 15px; height: 15px; }
+  .clu-row .cr-main { font-weight: 700; color: var(--text); }
+  .clu-row .cr-sub { color: var(--text-sub); font-size: 11.5px; }
+  .rep-badge { background: var(--std-accent); color: #fff; font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 9px; margin-left: auto; }
+  .suspect-box { border: 1px dashed var(--warn); border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 12px; background: #fffaf2; font-size: 12.5px; }
+  .suspect-box .sb-title { font-weight: 700; color: var(--warn); margin-bottom: 6px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    z-index: 60; align-items: flex-start; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 8px; margin-top: 8vh; width: 460px; max-width: 92vw;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; }
+  .modal.modal-wide { width: 1080px; max-width: 97vw; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; border-bottom: 1px solid var(--line); }
+  .modal-title { font-weight: 700; color: var(--blue); font-size: 15px; }
+  .modal-x { border: none; background: none; font-size: 22px; line-height: 1;
+    color: var(--text-sub); cursor: pointer; padding: 0 4px; }
+  .modal-x:hover { color: var(--text); }
+  .modal-body { padding: 18px; max-height: 72vh; overflow: auto; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px;
+    border-top: 1px solid var(--line); }
+  .modal-body .field { margin-bottom: 6px; }
+  .save-hint { font-size: 12px; color: var(--text-sub); margin-top: 8px; display: flex;
+    align-items: center; gap: 6px; }
+
+  /* ---------- Loading overlay ---------- */
+  .load-overlay { display: none; position: absolute; inset: 0; z-index: 5;
+    background: rgba(255,255,255,.8); align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; }
+  .load-overlay.show { display: flex; }
+  .spinner { width: 34px; height: 34px; border: 3px solid #d3ddf5; border-top-color: var(--std-accent);
+    border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-msg { font-size: 12.5px; color: var(--text-sub); }
+
+  /* ---------- Toast ---------- */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 10px 18px; border-radius: 6px; font-size: 13px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 90; }
+  .toast.show { opacity: 0.95; }
+
+  /* ---------- Empty state ---------- */
+  .empty { padding: 48px 16px; text-align: center; color: var(--text-sub); font-size: 12.5px; }
+  .empty .big { font-size: 34px; margin-bottom: 8px; opacity: .6; }
+
+  /* ---------- 임계치 조절 컨트롤 ---------- */
+  .thresh-bar { display: flex; flex-wrap: wrap; gap: 14px 20px; padding: 10px 14px;
+    background: var(--std-tint); border: 1px solid var(--blue-line); border-radius: 6px; margin-bottom: 12px; }
+  .thresh-bar .th-title { width: 100%; font-weight: 700; color: var(--blue); font-size: 12.5px; }
+  .thresh { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .thresh label { color: var(--text-sub); font-weight: 600; min-width: 96px; }
+  .thresh input[type=range] { width: 120px; accent-color: var(--blue); }
+  .thresh .th-val { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--blue);
+    min-width: 34px; text-align: right; }
+
+  /* ---------- 하단 슬라이드 결과 패널 (유사 검색) ---------- */
+  .result-dock { max-height: 0; overflow: hidden; margin-top: 0;
+    transition: max-height .5s cubic-bezier(.4,0,.2,1), margin-top .5s, opacity .4s; opacity: 0; }
+  .result-dock.show { max-height: 1600px; margin-top: 16px; opacity: 1; }
+  .result-dock .rd-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border-bottom: 1px solid var(--line); background: #fafbfc; border-radius: 6px 6px 0 0; }
+  .result-dock .rd-title { font-weight: 700; color: var(--blue); font-size: 14px; }
+  .result-dock .rd-body { padding: 14px; }
+  .detail-box { margin-top: 4px; }
+
+  /* ---------- 우측 슬라이드 오버(Drawer) + 배경 블러 ---------- */
+  .drawer-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(20,25,60,.18);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    opacity: 0; pointer-events: none; transition: opacity .35s; }
+  .drawer-backdrop.show { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 1040px; max-width: 96vw;
+    min-width: 480px; background: #fff; z-index: 71; box-shadow: -8px 0 34px rgba(0,0,0,.22);
+    transform: translateX(100%); transition: transform .38s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; }
+  .drawer.show { transform: translateX(0); }
+  .drawer.dragging { transition: none; }
+  /* 좌측 가장자리 드래그 핸들로 폭 조절 */
+  .drawer-resizer { position: absolute; top: 0; left: 0; width: 8px; height: 100%;
+    cursor: col-resize; z-index: 2; }
+  .drawer-resizer::before { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px;
+    background: var(--line); transition: background .15s, width .15s; }
+  .drawer-resizer:hover::before, .drawer-resizer.active::before { background: var(--blue); width: 4px; left: 1px; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: #fafbfc; }
+  .drawer-title { font-weight: 700; color: var(--blue); font-size: 15px; }
+  .drawer-title span { font-weight: 400; color: var(--text-sub); font-size: 13px; }
+  .drawer-body { padding: 16px 18px; overflow: auto; flex: 1; }
+
+  .info-ic { display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%; background: var(--blue); color: #fff;
+    font-size: 11px; font-weight: 700; flex: none; }
+  .proto-flag { font-size: 11px; color: var(--warn); background: #fff7ec; border: 1px solid #f0d9b5;
+    border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header class="gnb">
+  <div class="gnb-top">
+    <div class="brand">
+      <span class="samsung-mark">SAMSUNG</span>
+      <span class="nsrm-logo"><span class="nsrm-mark">DS N-SRM</span></span>
+    </div>
+    <span class="proto-flag">PROTOTYPE · UI/UX 미리보기 (실제 로직 미연동)</span>
+  </div>
+  <nav class="gnb-menu" id="gnb-menu">
+    <button data-menu="upload" class="active">1. Data Upload</button>
+    <button data-menu="standardize">2. Standardization</button>
+    <button data-menu="dedup">3. Deduplication</button>
+    <button data-menu="similarity">4. Similarity Search</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ 1. DATA UPLOAD ============ -->
+  <section id="page-upload" class="page">
+    <h1 class="page-title">Data Upload</h1>
+    <p class="page-sub">파일 업로드 또는 수기 입력 → Confirm으로 파싱 → 우측 테이블에서 편집 → Save로 이름 지정 저장</p>
+    <div class="twopane" id="up-twopane">
+      <div class="pane pane-left">
+        <div class="pane-box">
+          <div class="pane-head">
+            <span class="ph-title">입력 (파일 / 수기)</span>
+            <div class="ph-actions"><button class="btn primary" id="up-confirm">Confirm</button></div>
+          </div>
+          <div class="pane-body">
+            <div class="drop" id="up-drop">
+              <div class="big">⬆</div>
+              <div><b>xlsx 파일 업로드</b> (클릭 또는 드래그)</div>
+              <div style="margin-top:4px;font-size:11.5px">컬럼명 기준으로 파싱됩니다</div>
+              <div id="up-filename" style="margin-top:8px;color:var(--blue);font-weight:700"></div>
+            </div>
+            <div class="divider">또는 수기 입력</div>
+            <div class="manual-grid" id="up-manual"></div>
+            <div class="form-actions">
+              <button class="btn ghost sm" id="up-manual-add">+ 이 행 추가</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pane pane-right">
+        <div class="pane-box">
+          <div class="pane-head">
+            <span class="ph-title">정제된 테이블</span>
+            <div class="ph-actions"><button class="btn primary" id="up-save">Save</button></div>
+          </div>
+          <div class="pane-body" id="up-right-body">
+            <div class="empty"><div class="big">▦</div>Confirm을 누르면 파싱된 테이블이 여기에 표시됩니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ 2. STANDARDIZATION ============ -->
+  <section id="page-standardize" class="page hidden">
+    <h1 class="page-title">Standardization</h1>
+    <p class="page-sub">저장한 테이블 로드(복수 선택·이어붙이기) → 표준화 → 행별 상태 확정 → Save</p>
+    <div class="twopane" id="std-twopane">
+      <div class="pane pane-left">
+        <div class="pane-box">
+          <div class="pane-head">
+            <span class="ph-title">데이터 로드 / 편집</span>
+            <div class="ph-actions">
+              <button class="btn" id="std-run">Standardization</button>
+              <button class="btn ghost" id="std-reset">초기화</button>
+            </div>
+          </div>
+          <div class="pane-body">
+            <p class="pane-note">저장된 업로드 테이블 (복수 선택 후 Load, 다시 선택 후 Load 시 이어붙임)</p>
+            <div class="tbl-list" id="std-list"></div>
+            <div class="list-actions">
+              <button class="btn sm" id="std-load">Load</button>
+              <button class="btn ghost sm" id="std-manual-btn">+ 수기 입력</button>
+            </div>
+            <div id="std-left-table"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pane pane-right">
+        <div class="pane-box">
+          <div class="load-overlay" id="std-loading"><div class="spinner"></div><div class="load-msg">표준화 진행 중…</div></div>
+          <div class="pane-head">
+            <span class="ph-title">표준화 결과</span>
+            <div class="ph-actions"><button class="btn primary" id="std-save">Save</button></div>
+          </div>
+          <div class="pane-body" id="std-right-body">
+            <div class="empty"><div class="big">✦</div>좌측에서 데이터를 로드하고 Standardization을 누르세요<br>
+              <span style="font-size:11.5px">행 선택 없으면 전체, 선택 시 해당 행만 표준화</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. DEDUPLICATION ============ -->
+  <section id="page-dedup" class="page hidden">
+    <h1 class="page-title">Deduplication</h1>
+    <p class="page-sub">표준화된 테이블 로드 → Dedup → 중복 클러스터에서 대표 선택 → Apply → 저장</p>
+    <div class="twopane" id="dd-twopane">
+      <div class="pane pane-left">
+        <div class="pane-box">
+          <div class="pane-head">
+            <span class="ph-title">데이터 로드 / 편집</span>
+            <div class="ph-actions"><button class="btn" id="dd-run">Dedup</button></div>
+          </div>
+          <div class="pane-body">
+            <div class="thresh-bar">
+              <span class="th-title">중복 판정 임계치 (조정 시 재실행)</span>
+              <div class="thresh"><label>업체명 유사도</label>
+                <input type="range" id="dd-th-name" min="50" max="100" value="85">
+                <span class="th-val" id="dd-th-name-v">0.85</span></div>
+              <div class="thresh"><label>주소 Jaccard</label>
+                <input type="range" id="dd-th-addr" min="10" max="100" value="50">
+                <span class="th-val" id="dd-th-addr-v">0.50</span></div>
+              <div class="thresh"><label>좌표 거리(m)</label>
+                <input type="range" id="dd-th-coord" min="10" max="1000" step="10" value="100">
+                <span class="th-val" id="dd-th-coord-v">100</span></div>
+            </div>
+            <p class="pane-note">저장된 표준화 테이블 (복수 선택 후 Load, 이어붙이기 지원)</p>
+            <div class="tbl-list" id="dd-list"></div>
+            <div class="list-actions">
+              <button class="btn sm" id="dd-load">Load</button>
+              <button class="btn ghost sm" id="dd-manual-btn">+ 수기 입력</button>
+            </div>
+            <div id="dd-left-table"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pane pane-right">
+        <div class="pane-box">
+          <div class="load-overlay" id="dd-loading"><div class="spinner"></div><div class="load-msg">중복 분석 중…</div></div>
+          <div class="pane-head">
+            <span class="ph-title">중복 결과 (클러스터)</span>
+            <div class="ph-actions">
+              <button class="btn" id="dd-apply">Apply</button>
+              <button class="btn primary" id="dd-save">Save</button>
+            </div>
+          </div>
+          <div class="pane-body" id="dd-right-body">
+            <div class="empty"><div class="big">⧉</div>좌측에서 데이터를 로드하고 Dedup을 누르세요</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 하단 슬라이드 결과 패널 (Apply 결과) -->
+    <div class="card result-dock" id="dd-dock">
+      <div class="rd-head">
+        <span class="rd-title">중복 제거 결과</span>
+        <button class="btn ghost sm" id="dd-dock-close">닫기</button>
+      </div>
+      <div class="rd-body" id="dd-dock-body"></div>
+    </div>
+  </section>
+
+  <!-- ============ 4. SIMILARITY SEARCH ============ -->
+  <section id="page-similarity" class="page hidden">
+    <h1 class="page-title">Similarity Search</h1>
+    <p class="page-sub">기준 테이블 로드(좌) → 확인할 데이터 입력/업로드(우) → Similarity Search → 팝업 결과</p>
+    <div class="twopane" id="sim-twopane">
+      <div class="pane pane-left">
+        <div class="pane-box">
+          <div class="pane-head"><span class="ph-title">기준 테이블 (Reference)</span></div>
+          <div class="pane-body">
+            <div class="thresh-bar">
+              <span class="th-title">유사 판정 임계치 (매칭 표시 기준)</span>
+              <div class="thresh"><label>매칭 임계 종합</label>
+                <input type="range" id="sim-th-match" min="0" max="100" value="60">
+                <span class="th-val" id="sim-th-match-v">60</span></div>
+              <div class="thresh"><label>업체명 가중</label>
+                <input type="range" id="sim-th-name" min="0" max="100" value="50">
+                <span class="th-val" id="sim-th-name-v">50%</span></div>
+            </div>
+            <p class="pane-note">중복 제거하여 저장한 테이블 (복수 선택 후 Load, 이어붙이기)</p>
+            <div class="tbl-list" id="sim-list"></div>
+            <div class="list-actions"><button class="btn sm" id="sim-load">Load</button></div>
+            <div id="sim-ref-table"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pane pane-right">
+        <div class="pane-box">
+          <div class="pane-head">
+            <span class="ph-title">확인할 데이터 (Query)</span>
+            <div class="ph-actions">
+              <button class="btn ghost sm" id="sim-query-add">+ 행 추가</button>
+              <button class="btn primary" id="sim-run">Similarity Search</button>
+            </div>
+          </div>
+          <div class="pane-body" id="sim-query-body"></div>
+        </div>
+      </div>
+    </div>
+    <!-- 하단 슬라이드 결과 패널 -->
+    <div class="card result-dock" id="sim-dock">
+      <div class="rd-head">
+        <span class="rd-title">유사 Site 검색 결과</span>
+        <button class="btn ghost sm" id="sim-dock-close">닫기</button>
+      </div>
+      <div class="rd-body" id="sim-dock-body"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== 저장 모달 (공용) ===== -->
+<div class="modal-overlay" id="save-modal">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title">테이블 저장</span><button class="modal-x" id="save-x">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>테이블 이름</label><input type="text" id="save-name" placeholder="예: 260926_1차_업로드"></div>
+      <div class="save-hint"><span class="info-ic">i</span><span id="save-hint-text">이름을 입력하고 Save를 누르세요.</span></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="save-cancel">취소</button>
+      <button class="btn primary" id="save-confirm">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 유사 후보 상세 Drawer (우측 슬라이드 오버) ===== -->
+<div class="drawer-backdrop" id="sim-drawer-backdrop"></div>
+<aside class="drawer" id="sim-drawer">
+  <div class="drawer-resizer" id="sim-drawer-resizer" title="드래그하여 폭 조절"></div>
+  <div class="drawer-head">
+    <span class="drawer-title" id="sim-drawer-title">전체 후보 랭킹</span>
+    <button class="modal-x" id="sim-drawer-x">&times;</button>
+  </div>
+  <div class="drawer-body" id="sim-drawer-body"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 프로토타입 스크립트 (샘플 데이터·백엔드 미연동) ================= */
+"use strict";
+
+/* ---------- 공통 유틸 ---------- */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+let _toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+/* 편집 테이블 표시 컬럼 (프로토타입: BASE_COLUMNS 부분집합) */
+const BASE_COLS = ["업체", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)", "위도", "경도"];
+/* 표준화 결과 추가 컬럼 (참조 URL = 사용자가 직접 검증 후 상태 확정) */
+const STD_COLS = ["표준화", "STD 업체명", "STD 주소", "표준 위도", "표준 경도", "참조 URL"];
+
+/* ---------- 샘플 데이터 ---------- */
+const SAMPLE_UPLOAD = [
+  { "업체": "한라정밀㈜", "기업식별 코드": "5076197511", "Duns No.": "321872374", "국가/지역": "대한민국", "주소(Eng)": "26 Euljiro, Jung-gu, Seoul", "위도": "37.566010", "경도": "126.982877" },
+  { "업체": "삼성전자", "기업식별 코드": "1248100998", "Duns No.": "687563214", "국가/지역": "대한민국", "주소(Eng)": "129 Samsung-ro, Yeongtong-gu, Suwon", "위도": "37.257845", "경도": "127.052846" },
+  { "업체": "경인화학공업", "기업식별 코드": "3530641244", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "55 Namdong-daero, Namdong-gu, Incheon", "위도": "37.401234", "경도": "126.702345" },
+  { "업체": "LG화학 (LG Chem)", "기업식별 코드": "1078614109", "Duns No.": "556214870", "국가/지역": "대한민국", "주소(Eng)": "128 Yeoui-daero, Yeongdeungpo-gu, Seoul", "위도": "37.526300", "경도": "126.926100" },
+  { "업체": "동서기계 주식회사", "기업식별 코드": "", "Duns No.": "025559999", "국가/지역": "대한민국", "주소(Eng)": "10 Haeundae-ro, Haeundae-gu, Busan", "위도": "35.163100", "경도": "129.163700" },
+];
+
+/* 저장된 테이블 목록(메뉴별, 프로토타입 하드코딩) */
+const SAVED = {
+  upload: [
+    { name: "260926_1차_업로드", rows: SAMPLE_UPLOAD.slice(0, 3) },
+    { name: "260926_2차_업로드", rows: SAMPLE_UPLOAD.slice(3) },
+  ],
+  standardized: [
+    { name: "260926_표준화_완료", rows: buildStdSample() },
+  ],
+  deduped: [
+    { name: "260926_중복제거_마스터", rows: buildDedupedSample() },
+  ],
+};
+
+/* 표준화 완료 샘플(중복 포함 — Dedup 시연용) */
+function buildStdSample() {
+  const base = [
+    { "업체": "한라정밀㈜", "기업식별 코드": "5076197511", "Duns No.": "321872374", "국가/지역": "대한민국", "주소(Eng)": "26 Euljiro, Jung-gu, Seoul", "위도": "37.566010", "경도": "126.982877" },
+    { "업체": "한라정밀", "기업식별 코드": "5076197511", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "26 Eulji-ro, Jung-gu, Seoul", "위도": "37.566100", "경도": "126.982900" },
+    { "업체": "삼성전자", "기업식별 코드": "1248100998", "Duns No.": "687563214", "국가/지역": "대한민국", "주소(Eng)": "129 Samsung-ro, Yeongtong-gu, Suwon", "위도": "37.257845", "경도": "127.052846" },
+    { "업체": "경인화학공업", "기업식별 코드": "3530641244", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "55 Namdong-daero, Namdong-gu, Incheon", "위도": "37.401234", "경도": "126.702345" },
+    { "업체": "경인화학", "기업식별 코드": "3530641245", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "55 Namdong-daero, Namdong-gu, Incheon", "위도": "37.401200", "경도": "126.702300" },
+  ];
+  return base.map((r) => stdRow(r, "검증 완료"));
+}
+
+/* 중복 제거 완료 샘플(유사검색 기준 테이블용) */
+function buildDedupedSample() {
+  return SAMPLE_UPLOAD.map((r) => stdRow(r, "검증 완료"));
+}
+
+/* 원본 행 → 표준화 행(STD 컬럼 채움, 목업 변환) */
+function stdRow(r, status) {
+  const out = Object.assign({}, r);
+  out["표준화"] = status || "검증 완료";
+  out["STD 업체명"] = stdName(r["업체"]);
+  out["STD 주소"] = r["주소(Eng)"] || "";
+  out["표준 위도"] = r["위도"] || "";
+  out["표준 경도"] = r["경도"] || "";
+  /* 사용자가 클릭해 위치를 직접 검증할 수 있는 지도 링크(place_id/좌표 기반 흉내) */
+  const q = encodeURIComponent(`${r["업체"] || ""} ${r["주소(Eng)"] || ""}`.trim());
+  out["참조 URL"] = q ? `https://www.google.com/maps/search/?api=1&query=${q}` : "";
+  return out;
+}
+/* 업체명 표준화 흉내: 법인격/공백/특수문자 정리 */
+function stdName(name) {
+  return String(name || "")
+    .replace(/[㈜（）()]/g, " ")
+    .replace(/주식회사|\(주\)/g, " ")
+    .replace(/\bCo\.?\b|\bLtd\.?\b|\bInc\.?\b|\bChem\b/gi, " ")
+    .replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+/* ---------- GNB 탭 전환 ---------- */
+const PAGES = ["upload", "standardize", "dedup", "similarity"];
+$("gnb-menu").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-menu]");
+  if (!btn) return;
+  const menu = btn.dataset.menu;
+  document.querySelectorAll("#gnb-menu button").forEach((b) => b.classList.toggle("active", b === btn));
+  PAGES.forEach((p) => $("page-" + p).classList.toggle("hidden", p !== menu));
+});
+
+/* ---------- 좌우 비율 제어 + 드래그 리사이즈 (전 메뉴 공통) ---------- */
+function setupSplitters() {
+  document.querySelectorAll(".twopane").forEach((tp) => {
+    const left = tp.querySelector(".pane-left");
+    const right = tp.querySelector(".pane-right");
+    if (!left || !right || tp.querySelector(".splitter")) return;
+    const sp = document.createElement("div");
+    sp.className = "splitter";
+    sp.title = "드래그하여 좌우 비율 조절";
+    tp.insertBefore(sp, right);
+    let dragging = false;
+    sp.addEventListener("mousedown", (e) => {
+      dragging = true; sp.classList.add("active"); tp.classList.add("no-anim");
+      document.body.style.userSelect = "none"; document.body.style.cursor = "col-resize";
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const rect = tp.getBoundingClientRect();
+      let ratio = (e.clientX - rect.left) / rect.width;
+      ratio = Math.min(0.85, Math.max(0.15, ratio));
+      left.style.flexGrow = (ratio * 10).toFixed(2);
+      right.style.flexGrow = ((1 - ratio) * 10).toFixed(2);
+    });
+    window.addEventListener("mouseup", () => {
+      if (!dragging) return;
+      dragging = false; sp.classList.remove("active"); tp.classList.remove("no-anim");
+      document.body.style.userSelect = ""; document.body.style.cursor = "";
+    });
+  });
+}
+/* 애니메이션으로 좌측 flex-grow(0~10)를 전환 → 7:3 ↔ 3:7 */
+function animateRatio(tp, leftGrow) {
+  tp.classList.remove("no-anim");
+  tp.querySelector(".pane-left").style.flexGrow = leftGrow;
+  tp.querySelector(".pane-right").style.flexGrow = 10 - leftGrow;
+}
+setupSplitters();
+/* 초기 비율을 인라인으로 고정(드래그/애니메이션 기준점) — 애니메이션 없이 7:3 */
+document.querySelectorAll(".twopane").forEach((tp) => {
+  tp.querySelector(".pane-left").style.flexGrow = 7;
+  tp.querySelector(".pane-right").style.flexGrow = 3;
+});
+
+/* ---------- 편집 가능한 테이블 렌더러 ---------- */
+/* opts: { columns, rows, editable, selectable, stdCols, onChange } */
+function renderTable(columns, rows, opts) {
+  opts = opts || {};
+  const stdSet = new Set(opts.stdCols || []);
+  const sel = opts.selectable;
+  const editable = opts.editable;
+  let head = "<tr>";
+  if (sel) head += "<th style='width:34px'><input type='checkbox' class='row-chk' data-all='1'></th>";
+  head += "<th style='width:44px'>No.</th>";
+  columns.forEach((c) => {
+    const cls = stdSet.has(c) ? " class='std-col'" : "";
+    head += `<th${cls}>${esc(c)}</th>`;
+  });
+  if (editable) head += "<th style='width:36px'></th>";
+  head += "</tr>";
+
+  let body = "";
+  rows.forEach((row, i) => {
+    body += `<tr data-i='${i}'>`;
+    if (sel) body += `<td><input type='checkbox' class='row-chk' data-i='${i}'></td>`;
+    body += `<td>${i + 1}</td>`;
+    columns.forEach((c) => {
+      const isStd = stdSet.has(c);
+      const isAddr = c.indexOf("주소") >= 0;
+      if (c === "표준화") {
+        const st = row[c] || "";
+        const cls = st === "검증 완료" ? "s-검증완료" : st === "실패" ? "s-실패" : "s-확인필요";
+        body += `<td class='std-cell'><span class='status ${cls}' data-status data-i='${i}'>${esc(st || "확인 필요")}</span></td>`;
+      } else if (c === "참조 URL") {
+        const u = row[c] || "";
+        body += `<td class='std-cell'>${u ? `<a href='${esc(u)}' target='_blank' rel='noopener' class='ref-link' title='새 탭에서 위치 검증'>🔗 지도 확인</a>` : "—"}</td>`;
+      } else {
+        const tdCls = [isStd ? "std-cell" : "", isAddr ? "addr" : "", editable && !isStd ? "editable" : ""].filter(Boolean).join(" ");
+        const ce = editable && !isStd ? " contenteditable='true'" : "";
+        body += `<td${tdCls ? ` class='${tdCls}'` : ""} data-col='${esc(c)}' data-i='${i}'${ce}>${esc(row[c])}</td>`;
+      }
+    });
+    if (editable) body += `<td><span class='row-del' data-del='${i}' title='행 삭제'>✕</span></td>`;
+    body += "</tr>";
+  });
+
+  return `<div class='table-wrap'><table class='grid'><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* 편집 이벤트 바인딩(셀 편집·행삭제·체크박스·상태토글) */
+function bindTable(container, rows, opts) {
+  opts = opts || {};
+  container.querySelectorAll("td.editable").forEach((td) => {
+    td.addEventListener("blur", () => {
+      const i = +td.dataset.i, col = td.dataset.col;
+      rows[i][col] = td.textContent.trim();
+    });
+  });
+  container.querySelectorAll("[data-del]").forEach((x) => {
+    x.addEventListener("click", () => {
+      rows.splice(+x.dataset.del, 1);
+      opts.rerender && opts.rerender();
+    });
+  });
+  const all = container.querySelector("input[data-all]");
+  if (all) all.addEventListener("change", () => {
+    container.querySelectorAll("input.row-chk[data-i]").forEach((c) => {
+      c.checked = all.checked;
+      c.closest("tr").classList.toggle("sel", all.checked);
+    });
+  });
+  container.querySelectorAll("input.row-chk[data-i]").forEach((c) => {
+    c.addEventListener("change", () => c.closest("tr").classList.toggle("sel", c.checked));
+  });
+  /* 상태 배지 토글: 확인 필요 → 검증 완료 */
+  container.querySelectorAll("[data-status]").forEach((sp) => {
+    sp.addEventListener("click", () => {
+      const i = +sp.dataset.i;
+      if (rows[i]["표준화"] === "실패") return;
+      const next = rows[i]["표준화"] === "검증 완료" ? "확인 필요" : "검증 완료";
+      rows[i]["표준화"] = next;
+      sp.textContent = next;
+      sp.className = "status " + (next === "검증 완료" ? "s-검증완료" : "s-확인필요");
+    });
+  });
+}
+
+/* 선택된 행 인덱스 목록 */
+function selectedIndexes(container) {
+  return Array.from(container.querySelectorAll("input.row-chk[data-i]:checked")).map((c) => +c.dataset.i);
+}
+
+/* ================= 1. DATA UPLOAD ================= */
+let upRows = [];
+/* 수기 입력 폼 */
+(function buildManualForm() {
+  const g = $("up-manual");
+  g.innerHTML = BASE_COLS.map((c) =>
+    `<div class='field'><label>${esc(c)}</label><input type='text' data-mf='${esc(c)}'></div>`).join("");
+})();
+/* 드롭존 = 파일 업로드 시늉 */
+$("up-drop").addEventListener("click", () => {
+  $("up-filename").textContent = "STD_VLD_260926_site_master_TF.xlsx (샘플)";
+  toast("파일 선택됨 — Confirm을 누르면 파싱됩니다");
+});
+/* Confirm: 파일 샘플 파싱 or 수기 행 반영 → 우측 테이블 */
+$("up-confirm").addEventListener("click", () => {
+  const fileChosen = $("up-filename").textContent.trim();
+  const mf = {};
+  let hasManual = false;
+  $("up-manual").querySelectorAll("[data-mf]").forEach((inp) => {
+    if (inp.value.trim()) hasManual = true;
+    mf[inp.dataset.mf] = inp.value.trim();
+  });
+  if (fileChosen) {
+    upRows = SAMPLE_UPLOAD.map((r) => Object.assign({}, r));
+    toast(`파일 파싱 완료 — ${upRows.length}행`);
+  } else if (hasManual) {
+    upRows.push(mf);
+    $("up-manual").querySelectorAll("[data-mf]").forEach((inp) => (inp.value = ""));
+    toast("수기 행 1건 추가");
+  } else {
+    toast("파일을 선택하거나 수기 항목을 입력하세요");
+    return;
+  }
+  renderUpRight();
+  animateRatio($("up-twopane"), 3);   /* Confirm 후 7:3 → 3:7 */
+});
+$("up-manual-add").addEventListener("click", () => $("up-confirm").click());
+
+function renderUpRight() {
+  const body = $("up-right-body");
+  if (!upRows.length) {
+    body.innerHTML = "<div class='empty'><div class='big'>▦</div>Confirm을 누르면 파싱된 테이블이 여기에 표시됩니다</div>";
+    return;
+  }
+  body.innerHTML = `<div class='tbl-toolbar'><button class='btn ghost sm' id='up-add-row'>+ 빈 행</button>
+    <span class='count'>${upRows.length}행 · 셀 클릭 편집</span></div>` +
+    renderTable(BASE_COLS, upRows, { editable: true });
+  bindTable(body, upRows, { rerender: renderUpRight });
+  $("up-add-row").addEventListener("click", () => {
+    const blank = {}; BASE_COLS.forEach((c) => (blank[c] = ""));
+    upRows.push(blank); renderUpRight();
+  });
+}
+$("up-save").addEventListener("click", () => {
+  if (!upRows.length) { toast("저장할 데이터가 없습니다"); return; }
+  openSaveModal("upload", upRows.length);
+});
+
+/* ================= 공용 저장 모달 (2단계 확정) ================= */
+let saveCtx = { menu: null, confirmed: false };
+function openSaveModal(menu, count) {
+  saveCtx = { menu, confirmed: false };
+  $("save-name").value = "";
+  $("save-hint-text").textContent = `${count}행 · 이름을 입력하고 Save를 누르세요.`;
+  $("save-confirm").textContent = "Save";
+  $("save-modal").classList.add("show");
+  setTimeout(() => $("save-name").focus(), 50);
+}
+function closeSaveModal() { $("save-modal").classList.remove("show"); }
+$("save-x").addEventListener("click", closeSaveModal);
+$("save-cancel").addEventListener("click", closeSaveModal);
+$("save-confirm").addEventListener("click", () => {
+  const name = $("save-name").value.trim();
+  if (!name) { toast("테이블 이름을 입력하세요"); $("save-name").focus(); return; }
+  if (!saveCtx.confirmed) {
+    saveCtx.confirmed = true;
+    $("save-hint-text").textContent = `"${name}" 으로 저장하려면 Save를 한 번 더 누르세요.`;
+    $("save-confirm").textContent = "Save (확정)";
+    return;
+  }
+  closeSaveModal();
+  toast(`"${name}" 저장 완료 (${saveCtx.menu})`);
+});
+
+/* ================= 2. STANDARDIZATION ================= */
+let stdLeftRows = [];
+renderSavedList($("std-list"), SAVED.upload);
+$("std-load").addEventListener("click", () => {
+  const picks = pickedTables($("std-list"), SAVED.upload);
+  if (!picks.length) { toast("불러올 테이블을 선택하세요"); return; }
+  picks.forEach((t) => t.rows.forEach((r) => stdLeftRows.push(Object.assign({}, r))));
+  renderStdLeft();
+  toast(`${picks.length}개 테이블 로드 (누적 ${stdLeftRows.length}행)`);
+});
+$("std-manual-btn").addEventListener("click", () => {
+  const blank = {}; BASE_COLS.forEach((c) => (blank[c] = ""));
+  stdLeftRows.push(blank); renderStdLeft(); toast("빈 행 추가 — 셀을 편집하세요");
+});
+function renderStdLeft() {
+  const box = $("std-left-table");
+  if (!stdLeftRows.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class='tbl-toolbar' style='margin-top:10px'>
+      <span class='count'>${stdLeftRows.length}행 · 체크 없으면 전체 표준화</span></div>` +
+    renderTable(BASE_COLS, stdLeftRows, { editable: true, selectable: true });
+  bindTable(box, stdLeftRows, { rerender: renderStdLeft });
+}
+$("std-run").addEventListener("click", () => {
+  if (!stdLeftRows.length) { toast("먼저 데이터를 로드하세요"); return; }
+  const picks = selectedIndexes($("std-left-table"));
+  const targets = picks.length ? picks.map((i) => stdLeftRows[i]) : stdLeftRows.slice();
+  $("std-loading").classList.add("show");
+  setTimeout(() => {
+    $("std-loading").classList.remove("show");
+    stdResultRows = targets.map((r, k) => stdRow(r, k === targets.length - 1 && targets.length > 2 ? "확인 필요" : "검증 완료"));
+    renderStdRight(true);
+    animateRatio($("std-twopane"), 3);   /* 7:3 → 3:7 */
+    toast(`표준화 완료 — ${stdResultRows.length}행 (${picks.length ? "선택" : "전체"})`);
+  }, 900);
+});
+let stdResultRows = [];
+function renderStdRight(flash) {
+  const body = $("std-right-body");
+  body.innerHTML = `<p class='pane-note'>참조 URL(🔗 지도 확인)로 위치를 직접 검증한 뒤 상태 배지를 클릭해 <b>확인 필요 → 검증 완료</b>로 바꾸세요.</p>` +
+    `<div class='tbl-toolbar'><span class='count'>${stdResultRows.length}행 · 상태 배지 클릭 시 확인 필요 ↔ 검증 완료</span></div>` +
+    renderTable(BASE_COLS.concat(STD_COLS), stdResultRows, { editable: false, stdCols: STD_COLS });
+  bindTable(body, stdResultRows, {});
+  if (flash) {
+    body.querySelectorAll("td.std-cell").forEach((td) => {
+      td.classList.add("just-filled");
+      setTimeout(() => td.classList.remove("just-filled"), 1000);
+    });
+  }
+}
+$("std-reset").addEventListener("click", () => {
+  stdResultRows = [];
+  animateRatio($("std-twopane"), 7);   /* 3:7 → 7:3 복귀 */
+  $("std-right-body").innerHTML = "<div class='empty'><div class='big'>✦</div>좌측에서 데이터를 로드하고 Standardization을 누르세요<br><span style='font-size:11.5px'>행 선택 없으면 전체, 선택 시 해당 행만 표준화</span></div>";
+  toast("초기화 완료");
+});
+$("std-save").addEventListener("click", () => {
+  if (!stdResultRows.length) { toast("저장할 표준화 결과가 없습니다"); return; }
+  openSaveModal("standardized", stdResultRows.length);
+});
+
+/* ================= 3. DEDUPLICATION ================= */
+let ddLeftRows = [];
+renderSavedList($("dd-list"), SAVED.standardized);
+$("dd-load").addEventListener("click", () => {
+  const picks = pickedTables($("dd-list"), SAVED.standardized);
+  if (!picks.length) { toast("불러올 테이블을 선택하세요"); return; }
+  picks.forEach((t) => t.rows.forEach((r) => ddLeftRows.push(Object.assign({}, r))));
+  renderDdLeft();
+  toast(`${picks.length}개 테이블 로드 (누적 ${ddLeftRows.length}행)`);
+});
+$("dd-manual-btn").addEventListener("click", () => {
+  const blank = {}; BASE_COLS.concat(STD_COLS).forEach((c) => (blank[c] = ""));
+  blank["표준화"] = "검증 완료"; ddLeftRows.push(blank); renderDdLeft();
+});
+function renderDdLeft() {
+  const box = $("dd-left-table");
+  if (!ddLeftRows.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class='tbl-toolbar' style='margin-top:10px'>
+      <span class='count'>${ddLeftRows.length}행 · 체크 없으면 전체 대상</span></div>` +
+    renderTable(BASE_COLS.concat("STD 업체명"), ddLeftRows, { editable: false, selectable: true, stdCols: ["STD 업체명"] });
+  bindTable(box, ddLeftRows, { rerender: renderDdLeft });
+}
+
+/* 중복 판정 임계치 슬라이더 (값 표시 + 데이터 있으면 재실행) */
+const ddThresh = { name: 0.85, addr: 0.50, coord: 100 };
+function bindThresh(id, valId, fmt, key, store, onChange) {
+  const el = $(id), v = $(valId);
+  el.addEventListener("input", () => {
+    store[key] = key === "coord" ? +el.value : +el.value / 100;
+    v.textContent = fmt(el.value);
+  });
+  el.addEventListener("change", onChange);
+}
+bindThresh("dd-th-name", "dd-th-name-v", (x) => (x / 100).toFixed(2), "name", ddThresh, reRunDedup);
+bindThresh("dd-th-addr", "dd-th-addr-v", (x) => (x / 100).toFixed(2), "addr", ddThresh, reRunDedup);
+bindThresh("dd-th-coord", "dd-th-coord-v", (x) => x, "coord", ddThresh, reRunDedup);
+function reRunDedup() { if (ddClusters.length || ddLeftRows.length) { toast(`임계치 변경 — 재실행 (업체명 ${ddThresh.name.toFixed(2)})`); $("dd-run").click(); } }
+
+/* 프로토타입 dedup: STD 업체명(없으면 업체) 정규화 키로 그룹핑 */
+let ddClusters = [];   /* [{key, members:[rowIdx], rep:rowIdx}] */
+let ddReps = {};       /* clusterIdx -> chosen rowIdx */
+$("dd-run").addEventListener("click", () => {
+  if (!ddLeftRows.length) { toast("먼저 데이터를 로드하세요"); return; }
+  const picks = selectedIndexes($("dd-left-table"));
+  const idxs = picks.length ? picks : ddLeftRows.map((_, i) => i);
+  $("dd-loading").classList.add("show");
+  setTimeout(() => {
+    $("dd-loading").classList.remove("show");
+    const groups = {};
+    idxs.forEach((i) => {
+      const key = stdName(ddLeftRows[i]["STD 업체명"] || ddLeftRows[i]["업체"]);
+      (groups[key] = groups[key] || []).push(i);
+    });
+    ddClusters = Object.keys(groups).filter((k) => groups[k].length >= 2)
+      .map((k) => ({ key: k, members: groups[k], rep: groups[k][0] }));
+    ddReps = {}; ddClusters.forEach((c, ci) => (ddReps[ci] = c.rep));
+    renderDdRight();
+    animateRatio($("dd-twopane"), 3);
+    toast(`중복 분석 완료 — 클러스터 ${ddClusters.length}개`);
+  }, 900);
+});
+function rowLabel(r) {
+  const name = r["STD 업체명"] || r["업체"] || "(이름없음)";
+  const bits = [];
+  if (r["기업식별 코드"]) bits.push("코드 " + r["기업식별 코드"]);
+  if (r["Duns No."]) bits.push("Duns " + r["Duns No."]);
+  if (r["주소(Eng)"]) bits.push(r["주소(Eng)"]);
+  return { name, sub: bits.join(" · ") };
+}
+function renderDdRight() {
+  const body = $("dd-right-body");
+  if (!ddClusters.length) {
+    body.innerHTML = "<div class='empty'><div class='big'>✓</div>중복으로 판정된 그룹이 없습니다</div>";
+    return;
+  }
+  let html = "<p class='pane-note'>각 클러스터에서 <b>대표로 남길 Site</b>를 선택하세요. Apply를 누르면 대표 행만 남긴 테이블로 재구성됩니다.</p>";
+  ddClusters.forEach((c, ci) => {
+    html += `<div class='clu'><div class='clu-head'><span class='clu-title'>클러스터 ${ci + 1} <span>· ${c.members.length}개 행 중복</span></span>
+      <span class='clu-reason'>사유: 업체명/코드 일치</span></div><div class='clu-body'>`;
+    c.members.forEach((ri) => {
+      const L = rowLabel(ddLeftRows[ri]);
+      const isRep = ddReps[ci] === ri;
+      html += `<label class='clu-row ${isRep ? "is-rep" : ""}' data-ci='${ci}' data-ri='${ri}'>
+        <input type='radio' name='rep-${ci}' ${isRep ? "checked" : ""} data-ci='${ci}' data-ri='${ri}'>
+        <span><span class='cr-main'>${esc(L.name)}</span><br><span class='cr-sub'>${esc(L.sub)}</span></span>
+        ${isRep ? "<span class='rep-badge'>대표</span>" : ""}</label>`;
+    });
+    html += "</div></div>";
+  });
+  body.innerHTML = html;
+  body.querySelectorAll("input[type=radio]").forEach((rd) => {
+    rd.addEventListener("change", () => {
+      const ci = +rd.dataset.ci;
+      ddReps[ci] = +rd.dataset.ri;
+      renderDdRight();
+    });
+  });
+}
+$("dd-apply").addEventListener("click", () => {
+  if (!ddClusters.length) { toast("먼저 Dedup을 실행하세요"); return; }
+  const drop = new Set();
+  ddClusters.forEach((c, ci) => c.members.forEach((ri) => { if (ri !== ddReps[ci]) drop.add(ri); }));
+  const kept = ddLeftRows.filter((_, i) => !drop.has(i));
+  ddApplied = kept;
+  const body = $("dd-dock-body");
+  body.innerHTML = `<p class='pane-note'>선택한 대표 행만 남기고 중복 행을 병합했습니다.</p>` +
+    `<div class='tbl-toolbar'><span class='count'>${ddLeftRows.length}행 → <b>${kept.length}행</b> (${drop.size}행 병합)</span></div>` +
+    renderTable(BASE_COLS.concat("STD 업체명"), kept, { editable: false, stdCols: ["STD 업체명"] });
+  const dock = $("dd-dock");
+  dock.classList.add("show");
+  setTimeout(() => dock.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+  toast(`Apply 완료 — ${kept.length}행`);
+});
+$("dd-dock-close").addEventListener("click", () => $("dd-dock").classList.remove("show"));
+let ddApplied = [];
+$("dd-save").addEventListener("click", () => {
+  if (!ddApplied.length) { toast("Apply 후 저장할 수 있습니다"); return; }
+  openSaveModal("deduped", ddApplied.length);
+});
+
+/* ================= 4. SIMILARITY SEARCH ================= */
+let simRefRows = [];
+let simQueryRows = [];
+renderSavedList($("sim-list"), SAVED.deduped);
+$("sim-load").addEventListener("click", () => {
+  const picks = pickedTables($("sim-list"), SAVED.deduped);
+  if (!picks.length) { toast("기준 테이블을 선택하세요"); return; }
+  picks.forEach((t) => t.rows.forEach((r) => simRefRows.push(Object.assign({}, r))));
+  renderSimRef();
+  toast(`기준 테이블 로드 — ${simRefRows.length}행`);
+});
+function renderSimRef() {
+  const box = $("sim-ref-table");
+  if (!simRefRows.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class='tbl-toolbar' style='margin-top:10px'><span class='count'>기준 ${simRefRows.length}행</span></div>` +
+    renderTable(["STD 업체명", "기업식별 코드", "주소(Eng)"], simRefRows, { editable: false, stdCols: ["STD 업체명"] });
+}
+$("sim-query-add").addEventListener("click", () => {
+  const blank = {}; BASE_COLS.forEach((c) => (blank[c] = ""));
+  simQueryRows.push(blank); renderSimQuery(); toast("쿼리 행 추가 — 셀을 편집하세요");
+});
+function renderSimQuery() {
+  const body = $("sim-query-body");
+  if (!simQueryRows.length) {
+    body.innerHTML = "<div class='empty'><div class='big'>🔍</div>확인할 데이터를 입력하세요 (+ 행 추가) 후 Similarity Search</div>";
+    return;
+  }
+  body.innerHTML = `<div class='tbl-toolbar'><button class='btn ghost sm' id='sim-blank'>+ 빈 행</button>
+    <span class='count'>${simQueryRows.length}행 · 셀 클릭 편집</span></div>` +
+    renderTable(BASE_COLS, simQueryRows, { editable: true });
+  bindTable(body, simQueryRows, { rerender: renderSimQuery });
+  $("sim-blank").addEventListener("click", () => $("sim-query-add").click());
+}
+/* 초기 쿼리 샘플 2행 */
+simQueryRows = [
+  { "업체": "한라 정밀", "기업식별 코드": "5076197511", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "26 Euljiro, Jung-gu, Seoul", "위도": "37.5661", "경도": "126.9829" },
+  { "업체": "제일화학", "기업식별 코드": "9990001112", "Duns No.": "", "국가/지역": "대한민국", "주소(Eng)": "77 Sejong-daero, Jongno-gu, Seoul", "위도": "37.5700", "경도": "126.9770" },
+];
+renderSimQuery();
+
+/* 간이 유사도(0~100): 토큰 자카드 기반 */
+function tokens(s) { return new Set(String(s || "").toLowerCase().split(/[\s,./\-]+/).filter(Boolean)); }
+function jac(a, b) { const A = tokens(a), B = tokens(b); if (!A.size || !B.size) return 0; let inter = 0; A.forEach((t) => B.has(t) && inter++); return inter / (A.size + B.size - inter); }
+function pct(x) { return Math.round(x * 100); }
+function scorePair(q, r) {
+  const nameSim = pct(Math.max(jac(q["업체"], r["STD 업체명"]), jac(stdName(q["업체"]), r["STD 업체명"])));
+  const corpSim = q["기업식별 코드"] && r["기업식별 코드"] ? (q["기업식별 코드"] === r["기업식별 코드"] ? 100 : 0) : 0;
+  const dunsSim = q["Duns No."] && r["Duns No."] ? (q["Duns No."] === r["Duns No."] ? 100 : 0) : 0;
+  const addrSim = pct(jac(q["주소(Eng)"], r["주소(Eng)"] || r["STD 주소"]));
+  const avg = Math.round((nameSim + corpSim + dunsSim + addrSim) / 4);
+  return { nameSim, corpSim, dunsSim, addrSim, avg };
+}
+function avgClass(v) { return v >= 70 ? "avg-hi" : v >= 40 ? "avg-mid" : "avg-lo"; }
+
+/* 유사 판정 임계치 슬라이더 */
+const simThresh = { match: 60, nameWeight: 0.5 };
+$("sim-th-match").addEventListener("input", () => {
+  simThresh.match = +$("sim-th-match").value; $("sim-th-match-v").textContent = simThresh.match;
+});
+$("sim-th-name").addEventListener("input", () => {
+  simThresh.nameWeight = +$("sim-th-name").value / 100; $("sim-th-name-v").textContent = $("sim-th-name").value + "%";
+});
+$("sim-th-match").addEventListener("change", () => { if (!$("sim-dock").classList.contains("show")) return; $("sim-run").click(); });
+
+let simResults = [];
+$("sim-run").addEventListener("click", () => {
+  if (!simRefRows.length) { toast("기준 테이블을 먼저 로드하세요"); return; }
+  if (!simQueryRows.length) { toast("확인할 데이터를 입력하세요"); return; }
+  simResults = simQueryRows.map((q) => {
+    const matches = simRefRows.map((r, ri) => Object.assign({ ref_index: ri, ref: r }, scorePair(q, r)))
+      .sort((a, b) => b.avg - a.avg);
+    return { query: q, matches };
+  });
+  renderSimResults(simResults);
+  const dock = $("sim-dock");
+  dock.classList.add("show");
+  setTimeout(() => dock.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+  toast(`유사 검색 완료 — 쿼리 ${simResults.length}건`);
+});
+$("sim-dock-close").addEventListener("click", () => $("sim-dock").classList.remove("show"));
+
+function renderSimResults(results) {
+  let html = `<p class='pane-note'>각 쿼리 행에 최고 유사 Site를 매칭했습니다. 종합 점수가 매칭 임계(${simThresh.match})
+    미만이면 <b>매칭 없음(신규 채번 후보)</b>으로 표시합니다. 상세보기로 전체 후보 랭킹을 확인하세요.</p>`;
+  results.forEach((res, qi) => {
+    const top = res.matches[0];
+    const matched = top && top.avg >= simThresh.match;
+    const L = rowLabel(res.query);
+    const recCells = matched
+      ? `<td class='c-rec'>${esc(top.ref["STD 업체명"])}</td>
+         <td><span class='avg-badge ${avgClass(top.nameSim)}'>${top.nameSim}</span></td>
+         <td><span class='avg-badge ${avgClass(top.corpSim)}'>${top.corpSim}</span></td>
+         <td><span class='avg-badge ${avgClass(top.addrSim)}'>${top.addrSim}</span></td>
+         <td><span class='avg-badge ${avgClass(top.avg)}'>${top.avg}</span></td>`
+      : `<td class='c-rec' colspan='4' style='color:var(--warn);font-weight:700'>매칭 없음 — 신규 채번 후보</td>
+         <td><span class='avg-badge avg-lo'>${top ? top.avg : 0}</span></td>`;
+    html += `<div class='clu' style='margin-bottom:12px'>
+      <div class='clu-head'><span class='clu-title'>쿼리 ${qi + 1} <span>· ${esc(L.name)}</span></span>
+        <button class='btn ghost sm' data-detail='${qi}'>상세보기</button></div>
+      <div class='clu-body'>
+        <div class='table-wrap'><table class='grid'><thead><tr>
+          <th class='g-sub'>구분</th><th class='g-sub'>업체</th><th class='g-sub'>기업식별 코드</th><th class='g-sub'>주소</th>
+          <th class='g-rec'>매칭 업체</th><th class='g-rec'>업체명</th><th class='g-rec'>코드</th><th class='g-rec'>주소</th><th class='g-rec'>종합</th>
+        </tr></thead><tbody>
+          <tr>
+            <td class='c-sub'>쿼리</td><td class='c-sub'>${esc(res.query["업체"])}</td><td class='c-sub'>${esc(res.query["기업식별 코드"])}</td><td class='c-sub addr'>${esc(res.query["주소(Eng)"])}</td>
+            ${recCells}
+          </tr>
+        </tbody></table></div>
+      </div></div>`;
+  });
+  const body = $("sim-dock-body");
+  body.innerHTML = html;
+  body.querySelectorAll("[data-detail]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const qi = +btn.dataset.detail;
+      openSimDrawer(qi, results[qi]);
+    });
+  });
+}
+/* 상세보기 → 우측 슬라이드 오버 Drawer */
+function openSimDrawer(qi, res) {
+  const L = rowLabel(res.query);
+  $("sim-drawer-title").innerHTML = `쿼리 ${qi + 1} 전체 후보 랭킹 <span>· ${esc(L.name)}</span>`;
+  $("sim-drawer-body").innerHTML = renderDetail(res.matches);
+  $("sim-drawer-backdrop").classList.add("show");
+  $("sim-drawer").classList.add("show");
+}
+function closeSimDrawer() {
+  $("sim-drawer-backdrop").classList.remove("show");
+  $("sim-drawer").classList.remove("show");
+}
+$("sim-drawer-x").addEventListener("click", closeSimDrawer);
+$("sim-drawer-backdrop").addEventListener("click", closeSimDrawer);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSimDrawer(); });
+/* Drawer 폭 드래그 조절 (좌측 가장자리) */
+(function () {
+  const dr = $("sim-drawer"), rz = $("sim-drawer-resizer");
+  let dragging = false;
+  rz.addEventListener("mousedown", (e) => {
+    dragging = true; rz.classList.add("active"); dr.classList.add("dragging");
+    document.body.style.userSelect = "none"; document.body.style.cursor = "col-resize"; e.preventDefault();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const w = Math.min(window.innerWidth * 0.96, Math.max(480, window.innerWidth - e.clientX));
+    dr.style.width = w + "px";
+  });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false; rz.classList.remove("active"); dr.classList.remove("dragging");
+    document.body.style.userSelect = ""; document.body.style.cursor = "";
+  });
+})();
+function renderDetail(matches) {
+  let rows = matches.slice(0, 8).map((m, k) =>
+    `<tr><td>${k + 1}</td><td>${esc(m.ref["STD 업체명"])}</td><td>${esc(m.ref["기업식별 코드"])}</td>
+     <td class='addr'>${esc(m.ref["주소(Eng)"])}</td>
+     <td><span class='avg-badge ${avgClass(m.nameSim)}'>${m.nameSim}</span></td>
+     <td><span class='avg-badge ${avgClass(m.corpSim)}'>${m.corpSim}</span></td>
+     <td><span class='avg-badge ${avgClass(m.dunsSim)}'>${m.dunsSim}</span></td>
+     <td><span class='avg-badge ${avgClass(m.addrSim)}'>${m.addrSim}</span></td>
+     <td><span class='avg-badge ${avgClass(m.avg)}'>${m.avg}</span></td></tr>`).join("");
+  return `<p class='pane-note' style='margin-top:10px'>전체 후보 유사도 랭킹 (상위 8건)</p>
+    <div class='table-wrap'><table class='grid'><thead><tr>
+    <th>순위</th><th>업체명</th><th>코드</th><th>주소</th><th class='std-col'>업체명</th><th class='std-col'>코드</th><th class='std-col'>Duns</th><th class='std-col'>주소</th><th class='std-col'>종합</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+/* ================= 저장된 테이블 목록 렌더 (공용) ================= */
+function renderSavedList(container, tables) {
+  container.innerHTML = tables.map((t, i) =>
+    `<label class='tbl-item' data-i='${i}'>
+      <input type='checkbox' data-i='${i}'>
+      <span class='ti-main'>${esc(t.name)}</span>
+      <span class='ti-sub'>${t.rows.length}행</span>
+    </label>`).join("");
+  container.querySelectorAll("input[type=checkbox]").forEach((c) => {
+    c.addEventListener("change", () => c.closest(".tbl-item").classList.toggle("sel", c.checked));
+  });
+}
+function pickedTables(container, tables) {
+  return Array.from(container.querySelectorAll("input[type=checkbox]:checked")).map((c) => tables[+c.dataset.i]);
+}
+
+/* 모달 오버레이 바깥 클릭 닫기 */
+$("save-modal").addEventListener("click", (e) => { if (e.target === $("save-modal")) closeSaveModal(); });
+</script>
+</body>
+</html>

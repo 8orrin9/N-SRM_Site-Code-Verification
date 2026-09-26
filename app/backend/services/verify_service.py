@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+"""표준화·실재검증 서비스 (process_row 얇은 래핑).
+
+어댑터는 모듈 로드 시 1회 생성해 재사용한다. real/mock은 환경변수로만 전환.
+"""
+
+import os
+
+import deps  # noqa: F401
+
+from STD_VLD_260917_maps_adapter import make_adapter
+from STD_VLD_260917_run_verification import process_row
+
+_ADAPTER = None
+
+
+def _get_adapter():
+    """지연 생성 + 캐시. real 모드에서 키 없으면 mock으로 폴백."""
+    global _ADAPTER
+    if _ADAPTER is None:
+        mode = os.getenv("MAPS_ADAPTER_MODE", "real")
+        key = os.getenv("GOOGLE_MAPS_API_KEY")
+        if mode == "real" and not key:
+            mode = "mock"
+        _ADAPTER = make_adapter(mode, api_key=key)
+    return _ADAPTER
+
+
+def standardize_rows(rows: list) -> list:
+    """rows(한국어 컬럼 dict 리스트)를 표준화·검증한 출력 행 리스트로."""
+    adapter = _get_adapter()
+    return [process_row(row, adapter) for row in rows]

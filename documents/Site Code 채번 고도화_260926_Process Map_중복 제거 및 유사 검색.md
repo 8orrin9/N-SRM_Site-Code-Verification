@@ -246,3 +246,204 @@
 | `SIM_THRESHOLD`(재사용) | 0.85 | 업체명 최종 확인 임계 |
 
 임계값은 Golden Dataset으로 실측 후 조정한다.
+
+---
+
+# 유사 Site 검색 프로세스 (Similarity Search)
+
+신규 입력(쿼리) Site가 **이미 채번된 기준(reference) Site 집합**에 존재하는지 확인하기
+위한 로직 명세다. 존재하면 기존 Site Code를 재사용하고, 없으면 **신규 채번 후보**로
+제시한다. 실제 채번/재사용 결정은 사용자 판단이며, 본 로직은 **유사 후보를 점수와 함께 제시만** 한다.
+
+관련 모듈: `app/backend/find_similar.py` (신규 얇은 래퍼)
+재사용(수정 금지, 호출만): 중복 제거의 게이트 `code_gate`/`duns_gate`/`address_gate`/`coord_gate`/
+`name_gate`와 변환기 `_to_rows`(`SIM_260926_dedup.py`), `SIM`(`STD_VLD_260917_std_company.py`),
+`haversine`(`STD_VLD_260917_geo_common.py`)
+
+> **핵심 설계:** 유사 검색은 중복 제거와 **동일한 단계적 게이트**를 그대로 재사용한다. 다만 결과를
+> "확정/의심/무관"으로 **분류**하지 않고, 각 게이트의 **EQUAL 근접도를 가중치**로 삼아 업체명 SIM
+> 점수와 결합해 **하나의 종합 순위 점수**로 환산한다. 즉 "같으면 자른다(gate)"는 판정 로직을
+> 그대로 쓰되, 출력만 "얼마나 닮았나 줄 세운다(rank)"로 바꾼 것이다.
+
+---
+
+## 1. 입력 / 출력
+
+- **입력:** `query_rows`(확인할 신규 Site 행들), `reference_rows`(기준 Site 행들), `top_k`(기본 8).
+- **비교 단위:** 각 쿼리 행 × 모든 기준 행 (전수 1:1). 블로킹은 적용하지 않는다(§6 참조).
+- **정규화 일관성:** 쿼리·기준 행을 `_to_rows([row])[0]`로 게이트 입력 형식
+  (`{code, duns, std_name, coord, components}`)으로 변환한 뒤 게이트에 넘긴다. 중복 제거와
+  동일한 정규화(코드/Duns 영숫자화, 주소 `addressComponents` 구조 비교, 좌표 haversine)를 공유한다.
+- **출력** (`search(query_rows, reference_rows, top_k)` 반환):
+
+```python
+[
+  {
+    "query_index": 0,
+    "matches": [                         # avg(종합 순위 점수) 내림차순, 상위 top_k건
+      {"ref_index": 5, "ref_row": {...},
+       "nameSim": 92, "corpSim": 100, "dunsSim": null,   # SKIP은 null(정보없음)
+       "addrSim": 60, "coordSim": 88, "avg": 100,
+       "gates": {"code":"EQUAL","duns":"SKIP","addr":"SIMILAR","coord":"EQUAL","name":"EQUAL"},
+       "vetoed": false},
+      ...
+    ]
+  },
+  ...
+]
+```
+
+- 종합 점수(`avg`)는 **0~100 정수**. 필드 서브점수는 0~100 정수 또는 **`null`(SKIP=정보없음)**.
+- `matches`는 `avg` 내림차순 정렬 후 상위 `top_k`건만 남긴다.
+
+---
+
+## 2. 게이트 판정 → EQUAL 근접도
+
+각 게이트(코드/Duns/주소/좌표)는 중복 제거와 동일하게 `EQUAL/SIMILAR/DIFFERENT/SKIP` 중 하나를
+반환한다(판정 규칙은 이 문서 앞부분 §게이트 1~4 참조). 이를 **근접도 `c`** 로 환산한다.
+
+| 판정 | 근접도 `c` | 의미 | 필터 효과 |
+|---|---|---|---|
+| `EQUAL` | 1.0 | 정규화 후 동일 | 강한 양의 신호 |
+| `SIMILAR` | 0.6 | 미세 오타/토큰 부분일치 | 약한 양의 신호 |
+| `DIFFERENT` | 0.0 | 적극적 모순 | 필터 신호(§4) |
+| `SKIP` | — | 정보 없음(결측) | **집계 분모에서 제외**(0점 아님) |
+
+> **`SKIP`은 0이 아니다.** "정보 없음"을 0점으로 처리하면 "모순(DIFFERENT)"과 구분되지 않아,
+> 결측이 흔한 데이터에서 강한 단일 신호(예: Duns만 일치)가 부당하게 눌린다. 그래서 SKIP은
+> 점수 집계의 **분모에서 아예 제외**하고, 화면에는 빨간 0이 아니라 "—"로 표시한다.
+
+### 2-1. 코드/Duns 게이트 완화 — 자릿수 조건 제거(래퍼에서 재분류)
+
+중복 제거의 코어 게이트(`_code_like_gate`)는 유사(`SIMILAR`) 판정 시 **`len(a)==len(b)`(자릿수 동일)**
+조건을 요구한다. 이 때문에 **숫자 1개 삽입·삭제 오타**(예: `56789`↔`5678`, 편집거리 1)가
+`DIFFERENT`로 떨어져, 유사 검색에서 진짜 후보에 부당한 veto가 걸리고 순위에서 누락되는 문제가 있었다.
+
+유사 검색은 "검색/제시" 목적이므로, `find_similar.py`의 래퍼(`_relax_id_gate`)에서 코드/Duns
+게이트를 **후처리 재분류**한다(코어는 수정하지 않음):
+
+- 게이트가 `DIFFERENT`라도 **정규화 값의 편집거리 ≤ `CODE_SIMILAR_MAX_EDITS`(기본 1)** 이면
+  자릿수 차이와 무관하게 `SIMILAR`로 본다 → veto 미발동, 근접도 0.6 기여.
+- 편집거리가 크면(예: `AAA111`↔`BBB222`) 그대로 `DIFFERENT` 유지 → veto.
+
+> 예: 쿼리 Duns `56789`, 기준 Test_1의 Duns `5678`은 편집거리 1(삽입 오타)이라 `SIMILAR`.
+> 완화 전에는 `DIFFERENT`→veto ×0.35로 33점(25위)까지 밀렸으나, 완화 후 93점(1위)으로 복귀한다.
+
+---
+
+## 3. 종합 순위 점수 공식 (`score_pair`)
+
+가중치(모듈 상수, 튜닝 가능): `W_duns=0.35, W_code=0.30, W_coord=0.20, W_addr=0.15`.
+`nameSim = SIM(std_name_q, std_name_ref)[0]` (0~1, 업체명 결측이면 N=None).
+
+```
+# A. 게이트 근거 G — SKIP 아닌 게이트만 분모에 포함
+present = {g : verdict_g ≠ SKIP}
+G = Σ_{g∈present} W_g·c_g / Σ_{g∈present} W_g        # present 비면 G=None
+
+# B. 업체명 항 (약한 유사 감쇄)
+N = nameSim                                          # 결측이면 None
+if N is not None and 업체명==DIFFERENT:              # SIM<임계(0.85) — 우연히 겹치는 약한 유사
+    N = N · WEAK_NAME_FACTOR(=0.6)                   # 결합 기여만 감쇄(표시용 nameSim은 원점수 유지)
+
+# C. 강신호 dominance
+G_strong = 1.0   if 코드==EQUAL or Duns==EQUAL       # 식별자 완전일치는 그 자체로 확정적
+         = 0.85  if 주소==EQUAL or 좌표==EQUAL
+         = 0.0   otherwise
+
+# D. 결합 (evidence-dominant max-blend)
+if G is None and N is None: base = 0
+elif G is None:             base = N
+elif N is None:             base = G
+else:                       base = max(0.6·G + 0.4·N, G_strong, N)
+
+# E. 식별자 충돌 veto + 0~100 스케일
+V = 0.35  if 코드==DIFFERENT or Duns==DIFFERENT       # 아래로 가라앉되 목록엔 남김
+  = 1.0   otherwise
+avg = round(100 · V · base)
+```
+
+`max(…, G_strong, N)` 항이 **강한 단일 신호(Duns EQUAL 등)가 나머지 결측에도 지배**하도록 만든다.
+이것이 옛 단순 평균(÷5)의 핵심 결함 — 강신호 희석 — 을 제거하는 장치다.
+
+**약한 이름 감쇄(B항):** 업체명 SIM이 매칭 임계(0.85) 미만이면 게이트는 `DIFFERENT`로 본다.
+이때 원점수 그대로 `N`에 반영하면 `test`↔`LT Metal Co`(SIM 0.73)처럼 **우연히 문자가 겹치는
+무관한 업체**가 상위권을 잠식한다(짧은 쿼리일수록 심함). 그래서 이름 게이트가 `DIFFERENT`면
+결합용 `N`만 `WEAK_NAME_FACTOR(=0.6)`으로 감쇄한다(표시용 `nameSim`은 원점수 유지 — 투명성).
+예: `test`↔`LT Metal Co`는 avg 73(1위)→44로 내려가고, 이름·좌표·Duns가 실제로 맞는 진짜 후보가
+상위로 올라온다.
+
+---
+
+## 4. 필터 규칙 — 소프트 필터 + 식별자 충돌 veto
+
+결과가 **랭킹**이므로 후보를 목록에서 완전히 제거하지 않고, 강도별로 **감점**한다.
+
+- **코드 OR Duns == DIFFERENT** → **식별자 충돌**로 간주해 강한 곱셈 패널티 `V=0.35`.
+  서로 다른 등록 식별자는 다른 법인일 가능성이 높다. 다만 OCR/오타로 인한 오판 여지가 있어
+  **완전 배제 대신 하위로 가라앉히고**, 화면에 `식별자 충돌` 뱃지로 표시해 사람이 확인하게 한다.
+- **주소 OR 좌표 == DIFFERENT** → **soft**: 근접도 0 기여만, veto 없음.
+  (지사/HQ/공장 등 동일 업체의 위치 차이는 흔하므로 좌표·주소 불일치를 강하게 처벌하지 않는다.)
+- **SKIP**은 어디서든 중립 — 감점 없음.
+
+> **판단(트레이드오프):** 중복 제거의 `classify_pair`는 어느 게이트든 DIFFERENT면 즉시 NONE(배제)이다.
+> 유사 검색은 "검색/제시" 목적이라 dirty data 한 자리 차이로 동명 실업체를 **말없이 누락**시키는 것이
+> 더 나쁜 UX라고 보아, 배제 대신 감점 후 하위 노출로 설계했다(사용자 확정). 최종 컷은 §5 임계로 한다.
+
+---
+
+## 5. 매칭 판정 — "신규 채번 / 코드 매핑 기준 점수"
+
+랭킹된 후보 중 **최고 후보(matches[0])의 avg**를 사용자 조절 컷오프와 비교한다.
+프론트엔드 슬라이더 **"신규 채번 / 코드 매핑 기준 점수"**(0~100, 기본 60)가 이 컷오프다.
+
+- `matches[0].avg ≥ 기준 점수` → **기존 코드 매핑**(기존 Site로 간주, Site Code 재사용).
+- `matches[0].avg < 기준 점수` → **신규 채번 후보**.
+
+결과 요약 테이블의 맨 끝 **판정** 열에 이 결론을 배지로 명시한다 —
+`코드 매핑`(파란 배지) 또는 `신규 채번`(노란 배지). 슬라이더를 움직이면 즉시 재판정되어
+어떤 후보가 매핑/신규로 갈리는지 사용자가 바로 확인할 수 있다.
+
+백엔드는 임계와 무관하게 항상 상위 `top_k`를 반환하고, **매칭/신규 판정은 프론트에서** 수행한다
+(백엔드 무상태). `avg`가 이제 결측-인지·veto-반영 종합 점수라 같은 기본값(60)이 훨씬 유의미하다.
+(슬라이더 세부 튜닝은 이 스코어링 안정화 후 재논의.)
+
+---
+
+## 6. 효율화 / 현재 한계
+
+- **블로킹 미적용:** 쿼리 행마다 기준 전체를 전수 비교한다(`m×n`). 기준 집합이 대규모면
+  중복 제거의 블록 키(코드/Duns/geo/addr/name)를 재사용한 후보 축소가 필요하다(향후 확장).
+- **가중치·계수 미튜닝:** `W_*`, `α=0.6`, `veto=0.35`, `SIMILAR 근접도=0.6`,
+  `WEAK_NAME_FACTOR=0.6`은 임시값이다.
+
+---
+
+## 7. 임계값 / 상수 (유사 검색)
+
+| 상수 | 위치 | 기본값 | 의미 |
+|---|---|---|---|
+| `GATE_WEIGHTS.duns/code/coord/addr` | `find_similar.py` | .35/.30/.20/.15 | 게이트 근거 G의 신뢰도 가중치 |
+| `CLOSENESS[SIMILAR]` | `find_similar.py` | 0.6 | SIMILAR 판정의 EQUAL 근접도 |
+| `ALPHA` | `find_similar.py` | 0.6 | 게이트 근거 G vs 업체명 N 결합 비중 |
+| `VETO_FACTOR` | `find_similar.py` | 0.35 | 코드/Duns 충돌 시 곱셈 패널티 |
+| `WEAK_NAME_FACTOR` | `find_similar.py` | 0.6 | 업체명 게이트 DIFFERENT(약한 유사) 시 결합 기여 감쇄 |
+| `CODE_SIMILAR_MAX_EDITS`(재사용) | `SIM_260926_dedup.py` | 1 | 코드/Duns 완화 재분류 편집거리 임계(§2-1) |
+| `COORD_NEAR_M` / `COORD_FAR_M` | `find_similar.py` | 100 / 5000 | 좌표 **표시용** 연속 점수 감쇠 구간(m) |
+| `top_k` | API 파라미터 | 기준 전체 | 반환 후보 수(프론트가 상세 랭킹에서 '더보기'로 점진 노출) |
+| 신규 채번 / 코드 매핑 기준 점수 | 프론트 슬라이더 | 60 | 최고 후보 avg의 매핑/신규 판정 컷오프 |
+
+임계값은 Golden Dataset으로 실측 후 조정한다.
+
+### 워크드 예시 (설계 검증)
+
+| 케이스 | 옛 단순평균 | 신 순위점수 | 근거 |
+|---|---|---|---|
+| Duns EQUAL, 나머지 전부 결측 | 20 | **100** | `G_strong=1.0` 지배 |
+| 코드 DIFFERENT, 업체명 동일(1.0) | — | **35** | `base=1.0`이나 veto 0.35 |
+| 전부 SIMILAR, 업체명 0.90 | — | **90** | veto 없음, N 지배 |
+| 업체명만 0.88, 구조 데이터 전무 | 18 | **88** | 결측을 0 아닌 중립 처리 |
+| Duns DIFFERENT + 좌표 DIFFERENT + 업체명 0.5 | — | **18** | veto·모순으로 최하위 |
+| Duns `56789`↔`5678`(삽입 오타), 업체명 0.93 | — | **93** | §2-1 완화로 SIMILAR→veto 해제 |
+| 업체명 0.73(약한 유사)만, 구조 결측 | — | **44** | §3 약한 이름 감쇄(0.73·0.6) |

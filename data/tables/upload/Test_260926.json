@@ -1,0 +1,345 @@
+{
+  "name": "Test_260926",
+  "menu": "upload",
+  "columns": [
+    "업체",
+    "기업식별 코드",
+    "Duns No.",
+    "국가/지역",
+    "주소(Eng)",
+    "위도",
+    "경도"
+  ],
+  "rows": [
+    {
+      "업체": "Test_1",
+      "기업식별 코드": "1234",
+      "Duns No.": "5678",
+      "국가/지역": "한국",
+      "주소(Eng)": "서울특별시 강동구 천호대로 167길 26",
+      "위도": "",
+      "경도": ""
+    },
+    {
+      "업체": "AUTO SENSOR KOREA",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "경기도 수원시 영통구 중부대로448번길 97",
+      "위도": "37.2664485",
+      "경도": "127.0594727",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "HANA TECH",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "서울특별시 서초구 양재동 302-3",
+      "위도": "37.4743262",
+      "경도": "127.04531",
+      "행정구역": "13:Seoul"
+    },
+    {
+      "업체": "Suzhou Kematek, Inc.",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "1 San Qian Road Suzhou Gaoxin District",
+      "위도": "31.4",
+      "경도": "120.17",
+      "행정구역": "100:Jiangsu"
+    },
+    {
+      "업체": "APO(INDIUM CORPORATION OF AMERICA)",
+      "국가/지역": "SG:싱가포르",
+      "주소(Eng)": "Unnamed Road, Singapore, Singapore",
+      "위도": "1.26332535748932",
+      "경도": "103.875732421875",
+      "행정구역": "99:Singapore (General)"
+    },
+    {
+      "업체": "Samutsakorn",
+      "국가/지역": "TH:태국",
+      "주소(Eng)": "ถนน ศรีสุริฉัน, Tambon Khok Kham, Amphoe Mueang Samut Sakhon, Chang Wat Samut Sakhon, Thailand, 74000",
+      "위도": "13.5758798065832",
+      "경도": "100.333531977028",
+      "행정구역": "58:Samut Sakhon"
+    },
+    {
+      "업체": "Mattson Technology",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "Jing Hai Qu, Tian Jin Shi, China, 301609",
+      "위도": "38.94858178451374",
+      "경도": "116.974683552156",
+      "행정구역": "010:Beijing"
+    },
+    {
+      "업체": "Gu Xuan",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "",
+      "위도": "34.430609",
+      "경도": "108.806889",
+      "행정구역": "250:Shaanxi"
+    },
+    {
+      "업체": "Honeywell Automation and Control Solution(China) Co.,Ltd.",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "FUTE NORTH ROAD NO.456 5F A2 ROOM SHANGHAI PILOT FREE TRADE ZONE",
+      "위도": "31.089126813768",
+      "경도": "121.940074704927",
+      "행정구역": "020:Shanghai"
+    },
+    {
+      "업체": "CINOS(CX1,CX2)",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "중국 Shan Xi Sheng, Xi An Shi, Ba Qiao Qu, 亚洲道93WF+8X9 邮政编码: 710027",
+      "위도": "34.395799",
+      "경도": "109.074973",
+      "행정구역": "250:Shaanxi"
+    },
+    {
+      "업체": "제일써보테크",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "경기도 부천시 도당동 255-1",
+      "위도": "37.5091393",
+      "경도": "126.7846143",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "EHWA DiamEHWA Diamond Industrial Co., Ltd.",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "대한민국 경기도 화성시 방교동 801",
+      "위도": "37.165313662862",
+      "경도": "127.083885829268",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "Air Liquide Electronics US LP",
+      "국가/지역": "US:미합중국",
+      "주소(Eng)": "PO BOX 200269 HOUSTON TX",
+      "위도": "40.1742465094527",
+      "경도": "-74.7703792317304",
+      "행정구역": "US_99"
+    },
+    {
+      "업체": "Entegris Malaysia Sdn Bhd",
+      "국가/지역": "MY:말레이시아",
+      "주소(Eng)": "CHV7+63 Lunas, Kedah, 말레이시아",
+      "위도": "5.44304220161746",
+      "경도": "100.562630683701",
+      "행정구역": "KED:Kedah"
+    },
+    {
+      "업체": "JUHUA",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "VWX4+QP5, Kecheng District, Quzhou, Zhejiang, China, 324004",
+      "위도": "28.8993915855368",
+      "경도": "118.906831741333",
+      "행정구역": "130:Zhejiang"
+    },
+    {
+      "업체": "JUHUA",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "WV3J+W2, Kecheng District, Quzhou, Zhejiang, China",
+      "위도": "28.9047566017496",
+      "경도": "118.880123498853",
+      "행정구역": "130:Zhejiang"
+    },
+    {
+      "업체": "JUHUA",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "WV35+WMH, Weiyi Road, Ke Cheng Qu, Qu Zhou Shi, Zhe Jiang Sheng, China, 324012",
+      "위도": "28.9039264106275",
+      "경도": "118.858596258575",
+      "행정구역": "99:China (General)"
+    },
+    {
+      "업체": "CINOS(C4)",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "대한민국 경기도 화성시 향남읍 구문천리 929-2",
+      "위도": "37.0856062749302",
+      "경도": "126.899728529744",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "CINOS(C1)",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "대한민국 경기도 화성시 팔탄면 가재리 299-2",
+      "위도": "37.15742051436",
+      "경도": "126.926484489249",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "Solstice Electronic Materials - Spokane",
+      "국가/지역": "US:미합중국",
+      "주소(Eng)": "PO BOX 100257 PASADENA CA",
+      "위도": "47.6845972",
+      "경도": "-117.1981099",
+      "행정구역": "US_WA"
+    },
+    {
+      "업체": "CW QUERETARO MEXICO SA DE CV",
+      "국가/지역": "MX:멕시코",
+      "주소(Eng)": "RHH5+52, El Puerto, Querétaro, Mexico, 76215",
+      "위도": "20.8279801318248",
+      "경도": "-100.442426784886",
+      "행정구역": "MX_QRO"
+    },
+    {
+      "업체": "Entegris Malaysia Sdn Bhd",
+      "국가/지역": "MY:말레이시아",
+      "주소(Eng)": "Perdana Highway, Kampung Sungai Seluang, Lunas, Kedah, Malaysia, 09600",
+      "위도": "5.44230396180864",
+      "경도": "100.563611984253",
+      "행정구역": "KED:Kedah"
+    },
+    {
+      "업체": "SUZHOU NOBORT ELECTRONICS EQUIPMENT LIMITED COMPANY",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "8Q9C+R6W, Xinghua Street, Wu Zhong Qu, Su Zhou Shi, Jiang Su Sheng, China, 215121",
+      "위도": "31.3195538601286",
+      "경도": "120.770886170445",
+      "행정구역": "99:China (General)"
+    },
+    {
+      "업체": "CINOS(C2)",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "대한민국 경기도 화성시 향남읍 구문천리 930-17",
+      "위도": "37.0851245062634",
+      "경도": "126.897092549068",
+      "행정구역": "09:Gyeonggi-do"
+    },
+    {
+      "업체": "SJI SAIGON",
+      "국가/지역": "VN:베트남",
+      "주소(Eng)": "35, Đường Đồng Khởi, thành phố Biên Hòa, Đồng Nai, Vietnam",
+      "위도": "10.954258408027",
+      "경도": "106.867259743281",
+      "행정구역": "02:HCM City"
+    },
+    {
+      "업체": "SJI SAIGON",
+      "국가/지역": "VN:베트남",
+      "주소(Eng)": "35 Đ. Đồng Khởi, Tân Hiệp, Biên Hòa, Đồng Nai 810000 베트남",
+      "위도": "10.9546519",
+      "경도": "106.8672625",
+      "행정구역": "02:HCM City"
+    },
+    {
+      "업체": "SEGYUNG VINA CO.,LTD",
+      "국가/지역": "VN:베트남",
+      "주소(Eng)": "Yên Phong, Bắc Ninh, Vietnam",
+      "위도": "21.2239961339663",
+      "경도": "105.997148049299",
+      "행정구역": "06:Bac Ninh"
+    },
+    {
+      "업체": "SI FLEX VIETNAM CO.,LTD.",
+      "국가/지역": "VN:베트남",
+      "주소(Eng)": "Đường 1A, tt. Nếnh, Việt Yên, Bắc Giang, Vietnam",
+      "위도": "21.2166805114931",
+      "경도": "106.106729507446",
+      "행정구역": "01:Hanoi"
+    },
+    {
+      "업체": "AUO (Xiamen) Co., Ltd.",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "QJ5G+RG Shishi, Quanzhou, Fujian, China",
+      "위도": "24.7596035592581",
+      "경도": "118.626255030465",
+      "행정구역": "150:Fujian"
+    },
+    {
+      "업체": "PSK(CHINA) CO.,Ltd.",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "锦业路1号都市之门C座405号     西安 高新区",
+      "위도": "34.202462",
+      "경도": "108.894008",
+      "행정구역": "250:Shaanxi"
+    },
+    {
+      "업체": "天水华天科技股份有限公司",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "秦州区天水郡街道秦州大道360号  天水  741001 CN",
+      "위도": "34.57",
+      "경도": "105.68",
+      "행정구역": "260:Gansu"
+    },
+    {
+      "업체": "苏州新特式半导体有限公司",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "工业园区唯亭镇春辉路2号  苏州",
+      "위도": "",
+      "경도": "",
+      "행정구역": "100:Jiangsu"
+    },
+    {
+      "업체": "BOYD KOREA LLC",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "(Hwagye-dong)2, 2Sunhwan-ro 742beon-gil, Heungdeok-gu, Cheongju-si, Chungcheongbuk-do",
+      "위도": "",
+      "경도": "",
+      "행정구역": "04:Chungcheongbuk-do"
+    },
+    {
+      "업체": "Dinnoteck Co.,Ltd.",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "9F",
+      "위도": "",
+      "경도": "",
+      "행정구역": "17:Korea(General)"
+    },
+    {
+      "업체": "SHINHAN DIAMOND(XI'AN) CO.,LTD.",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "4R26+H2 중국 Shaanxi, 시안 시 창안 구",
+      "위도": "",
+      "경도": "",
+      "행정구역": "250:Shaanxi"
+    },
+    {
+      "업체": "SUZHOU POSTEL CO.,LTD",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "工业园区利达路4号     江苏省苏州市",
+      "위도": "",
+      "경도": "",
+      "행정구역": "100:Jiangsu"
+    },
+    {
+      "업체": "BOYD KOREA LLC",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "(Hwagye-dong)2, 2Sunhwan-ro 742beon-gil, Heungdeok-gu, Cheongju-si, Chungcheongbuk-do",
+      "위도": "",
+      "경도": "",
+      "행정구역": "04:Chungcheongbuk-do"
+    },
+    {
+      "업체": "LT Metal Co,.LTd.",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "(Gajwa-dong) 14, Gajaeul-ro, Seohae-gu, Incheon, Korea",
+      "위도": "",
+      "경도": "",
+      "행정구역": "06:Incheon"
+    },
+    {
+      "업체": "达成包装制品(苏州)有限公司",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "相城区望亭镇问渡路88号  苏州  215155 CN",
+      "위도": "",
+      "경도": "",
+      "행정구역": "100:Jiangsu"
+    },
+    {
+      "업체": "LT Metal Co,.LTd.",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "(Gajwa-dong) 14, Gajaeul-ro, Seohae-gu, Incheon, Korea",
+      "위도": "",
+      "경도": "",
+      "행정구역": "06:Incheon"
+    },
+    {
+      "업체": "达成包装制品(苏州)有限公司",
+      "국가/지역": "CN:중국",
+      "주소(Eng)": "相城区望亭镇问渡路88号  苏州  215155 CN",
+      "위도": "",
+      "경도": "",
+      "행정구역": "100:Jiangsu"
+    }
+  ],
+  "saved_at": "2026-09-26T20:03:37+09:00"
+}
