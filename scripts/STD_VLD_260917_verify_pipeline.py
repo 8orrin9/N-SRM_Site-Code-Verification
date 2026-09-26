@@ -25,6 +25,18 @@ def _query_url(company: str, address: str) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={q}"
 
 
+def _query_url_dual(company: str, std_address: str, raw_address: str) -> str:
+    """표준(지오코딩) 주소 검색 URL을 기본으로 제공하되, 원본 입력 주소가 달라
+    별도 검색이 될 때 두 URL을 ' | '로 병존한다(표준 → 원본 순). 지오코딩이
+    도시레벨·Plus Code로 뭉갠 경우 원본 주소가 실업체를 더 잘 찾아내는 것을 사람이
+    보조 확인하도록 하기 위함. 두 주소가 같으면 URL 하나만 반환."""
+    primary = _query_url(company, std_address or "")
+    if not (raw_address or "").strip():
+        return primary
+    secondary = _query_url(company, raw_address)
+    return primary if secondary == primary else f"{primary} | {secondary}"
+
+
 def _verified_reason(relaxed: bool, direct_code: str, relaxed_code: str) -> str:
     return relaxed_code if relaxed else direct_code
 
@@ -78,13 +90,13 @@ def _pick_std_address(ts_addr, ts_comps, g_addr, g_comps):
 # ---------------------------------------------------------------------------
 # Case A — 주소 + 업체명
 # ---------------------------------------------------------------------------
-def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.VerifyResult:
+def verify_case_A(company_std, addr_text, adapter, *, company_disp=None, lang=None) -> gc.VerifyResult:
     disp = company_disp or company_std
     g = adapter.G(addr_text)  # 주소만 지오코딩(업체명 결합은 파싱을 흐려 도시레벨로 떨어뜨림)
 
     if g["found"]:
         approx = _is_approximate(g)
-        ts = adapter.TS(company_std, g["coord_std"], precise=not approx)
+        ts = adapter.TS(company_std, g["coord_std"], precise=not approx, lang=lang)
         if ts["found"] and _within_gate(g["coord_std"], ts["coord_t"], approximate=approx):
             if ts.get("proximity"):
                 code = gc.VERIFIED_GEOCODE_PROXIMITY
@@ -107,7 +119,7 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.V
                 method_trace=["G", "TS"])
 
         # TS 미발견 또는 게이트 탈락(원거리 오매칭) → 업체명+주소텍스트 TSA로 재검증(병행 보강)
-        tsa = adapter.TSA(company_std, addr_text)
+        tsa = adapter.TSA(company_std, addr_text, lang=lang)
         if tsa["found"]:
             return make_result(
                 gc.VERIFIED_TEXTSEARCH_ADDR_TEXT,
@@ -122,12 +134,12 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.V
             note="지오코딩은 성공했으나 TextSearch(좌표·주소텍스트)에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, g["address_std"]),
+            reference_url=_query_url_dual(disp, g["address_std"], addr_text),
             address_components=g["address_components_g"],
             method_trace=["G", "TS", "TSA"])
 
     # G 실패 → TSA
-    tsa = adapter.TSA(company_std, addr_text)
+    tsa = adapter.TSA(company_std, addr_text, lang=lang)
     if tsa["found"]:
         return make_result(
             gc.VERIFIED_TEXTSEARCH_ADDR_TEXT,
@@ -146,9 +158,9 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None) -> gc.V
 # ---------------------------------------------------------------------------
 # Case B — 좌표 + 업체명
 # ---------------------------------------------------------------------------
-def verify_case_B(company_std, coord, adapter, *, company_disp=None) -> gc.VerifyResult:
+def verify_case_B(company_std, coord, adapter, *, company_disp=None, lang=None) -> gc.VerifyResult:
     disp = company_disp or company_std
-    ts = adapter.TS(company_std, coord)
+    ts = adapter.TS(company_std, coord, lang=lang)
     if ts["found"]:
         code = _verified_reason(ts["relaxed"], gc.VERIFIED_COORD_DIRECT,
                                 gc.VERIFIED_COORD_RELAXED)
@@ -174,13 +186,13 @@ def verify_case_B(company_std, coord, adapter, *, company_disp=None) -> gc.Verif
 # ---------------------------------------------------------------------------
 # Case C — 주소 + 좌표 + 업체명  (G 결과를 받아 2단계 이하를 수행하는 내부 함수)
 # ---------------------------------------------------------------------------
-def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.VerifyResult:
+def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -> gc.VerifyResult:
     """G.found = True 이후의 Case C 서브트리(문서 4장 2번)."""
     dist = gc.haversine(g["coord_std"], coord)
     approx = _is_approximate(g)
 
     if dist <= CMP_TOLERANCE_M:  # 2-2 위치 정합
-        ts = adapter.TS(company_std, g["coord_std"], precise=not approx)
+        ts = adapter.TS(company_std, g["coord_std"], precise=not approx, lang=lang)
         if ts["found"] and _within_gate(g["coord_std"], ts["coord_t"], approximate=approx):
             if ts.get("proximity"):
                 code = gc.VERIFIED_GEOCODE_PROXIMITY
@@ -203,12 +215,12 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
             note="표준·기존 좌표는 정합하나 TextSearch에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, g["address_std"]),
+            reference_url=_query_url_dual(disp, g["address_std"], addr_text),
             address_components=g["address_components_g"],
             method_trace=["G", "TS"])
 
     # 2-3 위치 불일치 → 기존좌표 TS_old
-    ts_old = adapter.TS(company_std, coord)
+    ts_old = adapter.TS(company_std, coord, lang=lang)
     if ts_old["found"]:
         # G가 APPROXIMATE(도시레벨)면 G의 place_id/좌표는 '어느 업체인지'의 증인이 될 수
         # 없다(도시 중심일 뿐). CMP 거부권을 박탈하고 기존좌표 TS가 찾은 실제 POI를 채택.
@@ -237,19 +249,20 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
                 place_id=g["place_id_g"], reference_url=_place_url(g["place_id_g"]),
                 address_components=g["address_components_g"],
                 method_trace=["G", "TS_old", "CMP"])
-        # MISMATCH → 확인 필요, 두 후보 addressComponents 병존
+        # MISMATCH → 확인 필요, 두 후보 addressComponents·place URL 병존
         both = list(g["address_components_g"]) + list(ts_old["address_components_t"])
         return make_result(
             gc.UNVERIFIED_PLACEID_MISMATCH,
             note="표준·기존 좌표에서 서로 다른 업체 발견 → 동명이업체/위치오류 의심(두 후보 제시)",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url(disp, g["address_std"]),
+            reference_url=" | ".join([_place_url(g["place_id_g"]),
+                                      _place_url(ts_old["place_id_t"])]),
             address_components=both,
             method_trace=["G", "TS_old", "CMP"])
 
     # TS_old 실패 → 표준좌표 TS_std
-    ts_std = adapter.TS(company_std, g["coord_std"], precise=not approx)
+    ts_std = adapter.TS(company_std, g["coord_std"], precise=not approx, lang=lang)
     if ts_std["found"] and _within_gate(g["coord_std"], ts_std["coord_t"], approximate=approx):
         if ts_std.get("proximity"):
             code = gc.VERIFIED_GEOCODE_PROXIMITY
@@ -274,14 +287,14 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter) -> gc.Verify
         note="표준·기존 좌표 모두 TextSearch에서 업체 미발견",
         std_address=g["address_std"],
         std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-        reference_url=_query_url(disp, g["address_std"]),
+        reference_url=_query_url_dual(disp, g["address_std"], addr_text),
         address_components=g["address_components_g"],
         method_trace=["G", "TS_old", "TS_std"])
 
 
-def _case_C_g_failed(company_std, disp, addr_text, coord, adapter) -> gc.VerifyResult:
+def _case_C_g_failed(company_std, disp, addr_text, coord, adapter, lang=None) -> gc.VerifyResult:
     """G.found = False 이후의 Case C 서브트리(문서 4장 3번)."""
-    ts_old = adapter.TS(company_std, coord)
+    ts_old = adapter.TS(company_std, coord, lang=lang)
     if ts_old["found"]:
         code = _verified_reason(ts_old["relaxed"], gc.VERIFIED_COORD_DIRECT,
                                 gc.VERIFIED_COORD_RELAXED)
@@ -293,7 +306,7 @@ def _case_C_g_failed(company_std, disp, addr_text, coord, adapter) -> gc.VerifyR
             place_id=ts_old["place_id_t"], reference_url=_place_url(ts_old["place_id_t"]),
             address_components=ts_old["address_components_t"],
             method_trace=["G(fail)", "TS_old"])
-    tsa = adapter.TSA(company_std, addr_text)
+    tsa = adapter.TSA(company_std, addr_text, lang=lang)
     if tsa["found"]:
         return make_result(
             gc.VERIFIED_TEXTSEARCH_ADDR_TEXT,
@@ -313,24 +326,24 @@ def _case_C_g_failed(company_std, disp, addr_text, coord, adapter) -> gc.VerifyR
 
 
 def verify_case_C(company_std, addr_en, addr_local, coord, adapter,
-                  *, company_disp=None) -> gc.VerifyResult:
+                  *, company_disp=None, lang=None) -> gc.VerifyResult:
     disp = company_disp or company_std
     dual = bool(addr_en) and bool(addr_local)
 
     if dual:
-        return _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter)
+        return _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter, lang=lang)
 
     addr_text = addr_en or addr_local
     g = adapter.G(addr_text)  # 주소만 지오코딩(업체명 결합은 파싱을 흐려 도시레벨로 떨어뜨림)
     if g["found"]:
-        return _case_C_with_G(company_std, disp, addr_text, coord, g, adapter)
-    return _case_C_g_failed(company_std, disp, addr_text, coord, adapter)
+        return _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=lang)
+    return _case_C_g_failed(company_std, disp, addr_text, coord, adapter, lang=lang)
 
 
 # ---------------------------------------------------------------------------
 # 듀얼주소 전처리 (설계 문서 1-2장) — Case A/C 1단계(G) 대체
 # ---------------------------------------------------------------------------
-def _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter) -> gc.VerifyResult:
+def _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter, *, lang=None) -> gc.VerifyResult:
     """Case C에서 영문/현지어 주소가 모두 존재할 때의 라우팅."""
     g_local = adapter.G(addr_local)  # 주소만 지오코딩(업체명 결합은 파싱을 흐림)
     g_en = adapter.G(addr_en)
@@ -341,25 +354,25 @@ def _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter) 
                         g_local["coord_std"], g_en["coord_std"])
         if result in ("MATCH", "PROXIMITY_MATCH"):
             # 합의: Local 우선 채택 후 2단계 이하 정상 진입
-            return _case_C_with_G(company_std, disp, addr_local, coord, g_local, adapter)
+            return _case_C_with_G(company_std, disp, addr_local, coord, g_local, adapter, lang=lang)
         # MISMATCH → Local/영문 각각 완주 후 통합 매트릭스
-        r_local = _case_C_with_G(company_std, disp, addr_local, coord, g_local, adapter)
-        r_en = _case_C_with_G(company_std, disp, addr_en, coord, g_en, adapter)
+        r_local = _case_C_with_G(company_std, disp, addr_local, coord, g_local, adapter, lang=lang)
+        r_en = _case_C_with_G(company_std, disp, addr_en, coord, g_en, adapter, lang=lang)
         return combine_matrix(r_local, r_en, adapter, company_std)
 
     if g_local["found"] or g_en["found"]:
         # 한쪽만 성공 → 그 결과를 G로 채택(신뢰도 낮음)
         g = g_local if g_local["found"] else g_en
         addr = addr_local if g_local["found"] else addr_en
-        res = _case_C_with_G(company_std, disp, addr, coord, g, adapter)
+        res = _case_C_with_G(company_std, disp, addr, coord, g, adapter, lang=lang)
         res.note = "(듀얼주소 중 한쪽 지오코딩만 성공, 신뢰도 낮음) " + res.note
         return res
 
     # 둘 다 실패 → G.found=False 분기. Local/영문 각각 TSA 시도(내부에서 좌표 폴백 포함)
-    res = _case_C_g_failed(company_std, disp, addr_local, coord, adapter)
+    res = _case_C_g_failed(company_std, disp, addr_local, coord, adapter, lang=lang)
     if res.status == gc.STATUS_UNVERIFIED and res.code == gc.UNVERIFIED_REVERSE_GEOCODE_ONLY:
         # Local 경로가 RG까지 갔으면 영문 주소로 TSA 한 번 더 시도
-        alt = _case_C_g_failed(company_std, disp, addr_en, coord, adapter)
+        alt = _case_C_g_failed(company_std, disp, addr_en, coord, adapter, lang=lang)
         if alt.status == gc.STATUS_VERIFIED:
             return alt
     return res

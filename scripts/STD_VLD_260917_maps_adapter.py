@@ -43,14 +43,17 @@ class MapsAdapter(abc.ABC):
               GEOMETRIC_CENTER/APPROXIMATE)로, APPROXIMATE는 도시·구역 레벨(부정확)."""
 
     @abc.abstractmethod
-    def TS(self, company: str, center_coord, *, precise=False) -> dict:
+    def TS(self, company: str, center_coord, *, precise=False, lang=None) -> dict:
         """좌표 중심 업체명 TextSearch. 1차 실패 시 반경 완화 1회 재시도.
         precise=True(정밀 지오코딩 좌표)면 이름 매칭 실패 시 근접 유일 POI를 보강 수용.
+        lang(BCP-47)이 주어지면 영어 이름 매칭 실패 시 현지어로 1회 재검색한다
+        (CJK↔영문 displayName 간극 보강).
         반환: {found, relaxed, proximity, place_id_t, coord_t, address_components_t}"""
 
     @abc.abstractmethod
-    def TSA(self, company: str, address_text: str) -> dict:
+    def TSA(self, company: str, address_text: str, *, lang=None) -> dict:
         """좌표 없이 업체명+주소텍스트 TextSearch. 실패 시 주소 레벨 축약 재시도.
+        lang(BCP-47)이 주어지면 영어 검색 실패 시 현지어로 1회 재검색한다.
         반환: {found, level, place_id_t, address_components_t}"""
 
     @abc.abstractmethod
@@ -225,8 +228,9 @@ class MockMapsAdapter(MapsAdapter):
                 return s
         return None
 
-    def TS(self, company: str, center_coord, *, precise=False) -> dict:
+    def TS(self, company: str, center_coord, *, precise=False, lang=None) -> dict:
         # precise: Real 어댑터의 근접보강 플래그. Mock은 좌표 정밀도 개념이 없어 무시.
+        # lang: Real 어댑터의 현지어 재검색용. Mock은 언어 개념이 없어 무시.
         place, street, idx = self._resolve_by_coord(center_coord)
         scenario = self._scenario(idx)
         comps = self._components(place, street, "places_new")
@@ -281,7 +285,8 @@ class MockMapsAdapter(MapsAdapter):
             "address_components_t": comps,
         }
 
-    def TSA(self, company: str, address_text: str) -> dict:
+    def TSA(self, company: str, address_text: str, *, lang=None) -> dict:
+        # lang: Real 어댑터의 현지어 재검색용. Mock은 언어 개념이 없어 무시.
         # 주소 레벨을 축약해가며(L1→L3) 재시도
         for level in (1, 2, 3):
             reduced = gc.reduce_address(address_text, level)
@@ -363,7 +368,7 @@ class RealMapsAdapter(MapsAdapter):
         }
 
     # ---- Places API (New) TextSearch ----
-    def _search_text(self, text_query, *, location_bias=None):
+    def _search_text(self, text_query, *, location_bias=None, language_code=None):
         import requests
         headers = {
             "Content-Type": "application/json",
@@ -373,7 +378,10 @@ class RealMapsAdapter(MapsAdapter):
                 "places.location,places.addressComponents,places.types"
             ),
         }
-        body = {"textQuery": text_query}  # languageCode 미지정 → 원문(현지 표기) 반환
+        body = {"textQuery": text_query}
+        if language_code:
+            # displayName을 해당 언어로 반환시켜 현지어 업체명과 SIM 비교 가능케 함.
+            body["languageCode"] = language_code
         if location_bias:
             body["locationBias"] = location_bias
         resp = self.session.post(self.TEXTSEARCH_URL, headers=headers, json=body, timeout=15)
@@ -432,38 +440,59 @@ class RealMapsAdapter(MapsAdapter):
                 near.append(pl)
         return self._pack(near[0]) if len(near) == 1 else None
 
-    def TS(self, company: str, center_coord, *, precise=False) -> dict:
+    def TS(self, company: str, center_coord, *, precise=False, lang=None) -> dict:
         def _bias(radius):
             return {"circle": {"center": {"latitude": center_coord[0],
                                           "longitude": center_coord[1]},
                                "radius": radius}}
-        # 1차: 좁은 반경
-        places = self._search_text(company, location_bias=_bias(2000.0))
-        m = self._first_match(places, company)
-        if m:
-            return {"found": True, "relaxed": False, "proximity": False, **m}
-        # 1-보강: 이름 매칭 실패 + 정밀 좌표면 근접 유일 POI 수용(교차언어)
-        if precise:
-            p = self._proximity_match(places, center_coord)
-            if p:
-                return {"found": True, "relaxed": False, "proximity": True, **p}
-        # 2차: 반경 완화 재시도
-        places = self._search_text(company, location_bias=_bias(20000.0))
-        m = self._first_match(places, company)
-        if m:
-            return {"found": True, "relaxed": True, "proximity": False, **m}
+
+        def _attempt(language_code):
+            # 1차: 좁은 반경
+            places = self._search_text(company, location_bias=_bias(2000.0),
+                                       language_code=language_code)
+            m = self._first_match(places, company)
+            if m:
+                return {"found": True, "relaxed": False, "proximity": False, **m}
+            # 1-보강: 이름 매칭 실패 + 정밀 좌표면 근접 유일 POI 수용(교차언어)
+            if precise:
+                p = self._proximity_match(places, center_coord)
+                if p:
+                    return {"found": True, "relaxed": False, "proximity": True, **p}
+            # 2차: 반경 완화 재시도
+            places = self._search_text(company, location_bias=_bias(20000.0),
+                                       language_code=language_code)
+            m = self._first_match(places, company)
+            if m:
+                return {"found": True, "relaxed": True, "proximity": False, **m}
+            return None
+
+        result = _attempt(None)  # 기본: 영어 표기 이름으로 매칭
+        # 영어 매칭 실패 + 현지어 지정 시 현지어 displayName으로 1회 재검색(CJK 보강)
+        if result is None and lang:
+            result = _attempt(lang)
+        if result:
+            return result
         return {"found": False, "relaxed": True, "proximity": False, "place_id_t": None,
                 "coord_t": None, "address_std": None, "address_components_t": []}
 
-    def TSA(self, company: str, address_text: str) -> dict:
-        for level in (1, 2, 3):
-            reduced = gc.reduce_address(address_text, level)
-            places = self._search_text(f"{company} {reduced}")
-            m = self._first_match(places, company)
-            if m:
-                return {"found": True, "level": level,
-                        "place_id_t": m["place_id_t"],
-                        "address_std": m.get("address_std"),
-                        "address_components_t": m["address_components_t"]}
+    def TSA(self, company: str, address_text: str, *, lang=None) -> dict:
+        def _attempt(language_code):
+            for level in (1, 2, 3):
+                reduced = gc.reduce_address(address_text, level)
+                places = self._search_text(f"{company} {reduced}",
+                                           language_code=language_code)
+                m = self._first_match(places, company)
+                if m:
+                    return {"found": True, "level": level,
+                            "place_id_t": m["place_id_t"],
+                            "address_std": m.get("address_std"),
+                            "address_components_t": m["address_components_t"]}
+            return None
+
+        result = _attempt(None)
+        if result is None and lang:
+            result = _attempt(lang)
+        if result:
+            return result
         return {"found": False, "level": 3, "place_id_t": None,
                 "address_std": None, "address_components_t": []}

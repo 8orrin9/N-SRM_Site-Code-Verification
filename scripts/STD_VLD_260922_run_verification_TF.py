@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """고객사 TF 테스트 데이터(xlsx) 표준화·실재검증 실행 엔트리.
 
-data/STD_VLD_260922_site_master_TF.xlsx의 TF_raw 시트를 읽어, 컬럼명을 기존
+data/STD_VLD_260926_site_master_TF_2.xlsx의 TF_raw 시트를 읽어, 컬럼명을 기존
 STD_VLD_260917 파이프라인이 기대하는 표준 컬럼명으로 매핑한 뒤 process_row에
-그대로 위임한다. Case 분기(A/B/C/X)는 pick_case가 필드 존재로 자동 결정하므로,
-향후 위/경도 등 컬럼이 추가되어도 이 스크립트 수정 없이 Case B/C가 처리된다.
+그대로 위임한다. Case 분기(A/B/C/X)는 pick_case가 필드 존재로 자동 결정한다.
+새 데이터셋은 위도/경도 컬럼을 포함하며, 이는 파이프라인 표준 컬럼명과 동일해
+별도 매핑 없이 통과하고 좌표가 있는 행은 Case C(주소+좌표)로 처리된다.
 
 사용:
   python scripts/STD_VLD_260922_run_verification_TF.py --mode real   # GOOGLE_MAPS_API_KEY 필요
@@ -27,18 +28,19 @@ from dotenv import load_dotenv  # noqa: E402
 from STD_VLD_260917_maps_adapter import make_adapter  # noqa: E402
 from STD_VLD_260917_run_verification import EXTRA_COLUMNS, process_row  # noqa: E402
 
-IN_PATH = os.path.join(ROOT, "data", "STD_VLD_260922_site_master_TF.xlsx")
-OUT_PATH = os.path.join(ROOT, "data", "STD_VLD_260922_site_master_TF_std.xlsx")
+IN_PATH = os.path.join(ROOT, "data", "STD_VLD_260926_site_master_TF_2.xlsx")
+OUT_PATH = os.path.join(ROOT, "data", "STD_VLD_260926_site_master_TF_2_std.xlsx")
 IN_SHEET = "TF_raw"
 OUT_SHEET = "TF_std"
 
 # TF_raw 원본 컬럼(순서 유지) — 출력 앞부분에 그대로 보존한다.
-SOURCE_COLUMNS = ["업체명 (Eng)", "국가/지역", "행정구역", "주소"]
+SOURCE_COLUMNS = ["업체명 (Eng)", "국가/지역", "행정구역", "주소", "위도", "경도"]
 
-# TF_raw 컬럼 → 기존 파이프라인 표준 컬럼명. 향후 위/경도 등이 생기면 여기에 추가.
+# TF_raw 컬럼 → 기존 파이프라인 표준 컬럼명. 위도/경도는 파이프라인 표준 컬럼명과
+# 동일하므로 매핑 불필요(그대로 통과 → _parse_coord가 인식).
 COLUMN_MAP = {
     "업체명 (Eng)": "업체",
-    "주소": "주소(Eng)",  # 단일 주소를 Eng 슬롯에 매핑 (→ 좌표 없으면 Case A)
+    "주소": "주소(Eng)",  # 단일 주소를 Eng 슬롯에 매핑 (→ 좌표 있으면 Case C)
 }
 
 # 최종 출력 컬럼: 원본 4컬럼 + STD 컬럼 + 파이프라인 산출물(EXTRA). TF에 없는

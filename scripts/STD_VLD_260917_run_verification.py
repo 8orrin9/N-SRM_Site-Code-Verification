@@ -25,6 +25,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 import STD_VLD_260917_geo_common as gc  # noqa: E402
 import STD_VLD_260917_verify_pipeline as vp  # noqa: E402
+from STD_VLD_260917_locale import lang_for_country  # noqa: E402
 from STD_VLD_260917_maps_adapter import make_adapter  # noqa: E402
 from STD_VLD_260917_std_company import standardize_company  # noqa: E402
 
@@ -77,17 +78,18 @@ def process_row(row, adapter) -> dict:
     addr_local = (row.get("주소(Local)") or "").strip()
     coord = _parse_coord(row)
     case = pick_case(row)
+    lang = lang_for_country(row.get("국가/지역"))
 
     if not company_std:
         result = gc.make_result(gc.FAILED_ALL_METHODS, note="업체명이 비어 있어 검증 불가")
     elif case == "C":
         result = vp.verify_case_C(company_std, addr_en, addr_local, coord, adapter,
-                                  company_disp=disp)
+                                  company_disp=disp, lang=lang)
     elif case == "A":
         result = vp.verify_case_A(company_std, addr_en or addr_local, adapter,
-                                  company_disp=disp)
+                                  company_disp=disp, lang=lang)
     elif case == "B":
-        result = vp.verify_case_B(company_std, coord, adapter, company_disp=disp)
+        result = vp.verify_case_B(company_std, coord, adapter, company_disp=disp, lang=lang)
     else:
         result = gc.make_result(gc.FAILED_ALL_METHODS,
                                 note="좌표·주소 자원이 전혀 없어 표준화 불가")
