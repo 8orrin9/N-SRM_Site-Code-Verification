@@ -14,6 +14,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -81,30 +82,38 @@ def _has_hangul(s) -> bool:
     return any("가" <= c <= "힣" for c in (s or ""))
 
 
-def _apply_juso(out, result, addr_candidates, juso_client):
-    """KR·한글 주소에 한해 도로명주소를 강제 통일한다(out을 제자리 수정).
+def _strip_road_paren(road_addr: str) -> str:
+    """행안부 roadAddr 끝의 괄호 참고항목(예: ' (천호동, 하이브2)')을 제거한다.
 
-    한글 주소만 검색 대상: STD 주소가 한글이면 우선, 아니면 원본 주소 후보
-    (주소(Eng)/주소(Local)) 중 한글인 것을 순서대로 사용한다. 입력 데이터가
-    한글 주소를 Eng/Local 어느 컬럼에 넣을지 일정치 않아 둘 다 후보로 본다.
-    매칭 성공 시 STD 주소를 roadAddr로 덮어쓰고 도로명/지번 컬럼을 채운다.
-    실패 시 기존 Google 결과를 유지하고 비고에 사유를 남긴다.
+    이 괄호는 법정동·건물명 참고정보인데, Geocoding에 그대로 넣으면 파싱이 흐려져
+    엉뚱한 지번으로 떨어진다(실측: 괄호 포함 시 '천호제3동 164-70'로 오인식). 순수
+    도로명만 남겨 Geocoding에 넣기 위한 정리로, 컬럼 저장에는 원본을 그대로 쓴다.
+    """
+    return re.sub(r"\s*\([^)]*\)\s*$", "", road_addr or "").strip()
+
+
+def _juso_road_addr(addr_candidates, juso_client):
+    """KR·한글 주소 후보로 행안부를 조회해 (도로명주소, 지번주소)를 반환한다.
+
+    한글 주소만 검색 대상: 주소 후보(주소(Eng)/주소(Local)) 중 한글인 것을 순서대로
+    사용한다. 입력 데이터가 한글 주소를 Eng/Local 어느 컬럼에 넣을지 일정치 않아 둘
+    다 후보로 본다. 매칭 성공 시 (road_addr, jibun_addr), 실패/한글없음 시 None.
+
+    이 결과의 road_addr를 Geocoding 입력으로 선처리하면, 입력이 지번이어도 도로명으로
+    통일된 표준 주소를 얻는다(행안부만 지번↔도로명 변환이 가능하기 때문).
     """
     keyword = None
-    for cand in [result.std_address, *addr_candidates]:
+    for cand in addr_candidates:
         if _has_hangul(cand):
             keyword = cand
             break
     if keyword is None:
-        return  # 한글 주소가 없으면 대상 아님(영문 주소는 매칭률 낮음)
+        return None  # 한글 주소가 없으면 대상 아님(영문 주소는 매칭률 낮음)
 
     hit = juso_client.resolve(keyword)
     if hit and hit.get("road_addr"):
-        out["STD 주소"] = hit["road_addr"]
-        out["도로명주소"] = hit["road_addr"]
-        out["지번주소"] = hit.get("jibun_addr", "")
-    else:
-        out["비고"] = (out.get("비고") or "") + " | 도로명 변환 실패(Juso 미매칭)"
+        return hit["road_addr"], hit.get("jibun_addr", "")
+    return None
 
 
 def pick_case(row) -> str:
@@ -124,15 +133,29 @@ def pick_case(row) -> str:
 def process_row(row, adapter, juso_client=None) -> dict:
     """한 행을 표준화·검증하여 출력 행 dict를 반환.
 
-    juso_client가 주어지고 KR·한글 주소이면 STD 주소를 도로명으로 강제 통일한다.
+    juso_client가 주어지고 KR·한글 주소이면, Geocoding 전에 행안부로 지번→도로명
+    변환을 선처리하여 표준 주소를 도로명으로 통일한다(Geocoding은 지번↔도로명 변환을
+    하지 못하므로 입력 자체를 도로명으로 바꿔 넣는다).
     """
     disp = (row.get("업체") or "").strip()
     company_std = standardize_company(disp)
     addr_en = (row.get("주소(Eng)") or "").strip()
     addr_local = (row.get("주소(Local)") or "").strip()
     coord = _parse_coord(row)
-    case = pick_case(row)
     lang = lang_for_country(row.get("국가/지역"))
+
+    # 행안부 선처리(KR·한글): 지번→도로명 변환 후 그 도로명을 유일한 Geocoding 입력으로
+    # 사용한다. 원본 주소(Eng/Local)는 out(=dict(row))에 그대로 보존된다.
+    juso_road = juso_jibun = ""
+    if juso_client and _is_kr(row.get("국가/지역")):
+        hit = _juso_road_addr([addr_en, addr_local], juso_client)
+        if hit:
+            juso_road, juso_jibun = hit  # 컬럼에는 행안부 원본(괄호 포함) 보존
+            # Geocoding 입력은 괄호 참고항목을 제거한 순수 도로명으로 단일 치환
+            addr_en, addr_local = _strip_road_paren(juso_road), ""
+
+    case = pick_case({"주소(Eng)": addr_en, "주소(Local)": addr_local,
+                      "위도": row.get("위도"), "경도": row.get("경도")})
 
     if not company_std:
         result = gc.make_result(gc.FAILED_ALL_METHODS, note="업체명이 비어 있어 검증 불가")
@@ -162,12 +185,9 @@ def process_row(row, adapter, juso_client=None) -> dict:
         json.dumps(result.address_components, ensure_ascii=False)
         if result.address_components else ""
     )
-    out["도로명주소"] = ""
-    out["지번주소"] = ""
-
-    # KR·한글 주소에 한해 도로명주소로 강제 통일(행안부 API 후처리)
-    if juso_client and _is_kr(row.get("국가/지역")) and result.std_address:
-        _apply_juso(out, result, [addr_en, addr_local], juso_client)
+    # 행안부 선처리로 확보한 한글 도로명/지번(변환 성공 시에만 채움).
+    out["도로명주소"] = juso_road
+    out["지번주소"] = juso_jibun
     return out
 
 
