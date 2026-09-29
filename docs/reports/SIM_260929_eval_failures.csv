@@ -1,0 +1,32 @@
+﻿row_uid,case_class,variant_type,top1_score,issue,detail
+Q0139,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0141,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0148,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0154,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0155,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0157,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0159,TP_composite,combo:combo_mid,49,매핑실패_신규채번,score=49<60
+Q0161,TP_composite,combo:combo_mid_high,85,오매핑,top1=E013 != E014
+Q0162,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0164,TP_composite,combo:combo_mid,49,매핑실패_신규채번,score=49<60
+Q0166,TP_composite,combo:combo_mid,93,오매핑,top1=E008 != E016
+Q0167,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0169,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0172,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0173,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0174,TP_composite,combo:combo_mid,96,오매핑,top1=E012 != E020
+Q0177,TP_composite,combo:combo_mid,93,오매핑,top1=E008 != E022
+Q0178,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0181,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0183,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0188,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0190,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0193,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0199,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0204,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
+Q0211,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E000
+Q0212,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E001
+Q0213,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E002
+Q0214,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E004
+Q0215,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E005
+Q0216,FP_branch,same_name_diff_location,100,신규인데_매핑,top1=E006
