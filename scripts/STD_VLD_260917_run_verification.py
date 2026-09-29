@@ -28,6 +28,7 @@ import STD_VLD_260917_verify_pipeline as vp  # noqa: E402
 from STD_VLD_260917_locale import lang_for_country  # noqa: E402
 from STD_VLD_260917_maps_adapter import make_adapter  # noqa: E402
 from STD_VLD_260917_std_company import standardize_company  # noqa: E402
+from STD_VLD_260929_juso_adapter import make_juso_client  # noqa: E402
 
 IN_PATH = os.path.join(ROOT, "data", "STD_VLD_260917_site_master_light.csv")
 OUT_PATH = os.path.join(ROOT, "data", "STD_VLD_260917_site_master_light_std.csv")
@@ -37,6 +38,7 @@ BASE_COLUMNS = [
     "No.", "Status", "Site Code", "Site 유형", "업체", "항구/공항 코드",
     "기업식별 코드", "Duns No.", "국가/지역", "행정구역", "주소(Eng)", "주소(Local)",
     "위도", "경도", "관련 협력사 코드", "수정일", "Site 출처", "STD 주소", "STD 업체명",
+    "도로명주소", "지번주소",
 ]
 # 산출물 추가 컬럼(설계 문서 6장)
 EXTRA_COLUMNS = [
@@ -56,6 +58,55 @@ def _parse_coord(row):
     return (lat, lon)
 
 
+# 국가/지역이 코드 없이 국가명으로만 적히는 경우('한국' 등)도 KR로 인식하기 위한 별칭.
+_KR_ALIASES = {"KR", "KOR", "한국", "대한민국", "SOUTH KOREA", "KOREA", "REPUBLIC OF KOREA"}
+
+
+def _is_kr(country_field) -> bool:
+    """'국가/지역' 값이 한국인지. 'KR: 한국' 형식의 콜론 앞 코드(locale.py:33 규칙)뿐
+    아니라 '한국'처럼 코드 없이 국가명으로만 적힌 경우도 KR로 인식한다."""
+    if not country_field:
+        return False
+    text = str(country_field).strip()
+    code = text.split(":", 1)[0].strip().upper()
+    if code in _KR_ALIASES:
+        return True
+    # 콜론 뒤 국가명(또는 콜론이 없는 순수 국가명)도 확인
+    tail = text.split(":", 1)[-1].strip().upper()
+    return tail in _KR_ALIASES
+
+
+def _has_hangul(s) -> bool:
+    """문자열에 한글 음절(가~힣)이 하나라도 있으면 True."""
+    return any("가" <= c <= "힣" for c in (s or ""))
+
+
+def _apply_juso(out, result, addr_candidates, juso_client):
+    """KR·한글 주소에 한해 도로명주소를 강제 통일한다(out을 제자리 수정).
+
+    한글 주소만 검색 대상: STD 주소가 한글이면 우선, 아니면 원본 주소 후보
+    (주소(Eng)/주소(Local)) 중 한글인 것을 순서대로 사용한다. 입력 데이터가
+    한글 주소를 Eng/Local 어느 컬럼에 넣을지 일정치 않아 둘 다 후보로 본다.
+    매칭 성공 시 STD 주소를 roadAddr로 덮어쓰고 도로명/지번 컬럼을 채운다.
+    실패 시 기존 Google 결과를 유지하고 비고에 사유를 남긴다.
+    """
+    keyword = None
+    for cand in [result.std_address, *addr_candidates]:
+        if _has_hangul(cand):
+            keyword = cand
+            break
+    if keyword is None:
+        return  # 한글 주소가 없으면 대상 아님(영문 주소는 매칭률 낮음)
+
+    hit = juso_client.resolve(keyword)
+    if hit and hit.get("road_addr"):
+        out["STD 주소"] = hit["road_addr"]
+        out["도로명주소"] = hit["road_addr"]
+        out["지번주소"] = hit.get("jibun_addr", "")
+    else:
+        out["비고"] = (out.get("비고") or "") + " | 도로명 변환 실패(Juso 미매칭)"
+
+
 def pick_case(row) -> str:
     """필드 존재로 Case A/B/C 결정. 좌표·주소 모두 없으면 'X'(실패)."""
     coord = _parse_coord(row)
@@ -70,8 +121,11 @@ def pick_case(row) -> str:
     return "X"
 
 
-def process_row(row, adapter) -> dict:
-    """한 행을 표준화·검증하여 출력 행 dict를 반환."""
+def process_row(row, adapter, juso_client=None) -> dict:
+    """한 행을 표준화·검증하여 출력 행 dict를 반환.
+
+    juso_client가 주어지고 KR·한글 주소이면 STD 주소를 도로명으로 강제 통일한다.
+    """
     disp = (row.get("업체") or "").strip()
     company_std = standardize_company(disp)
     addr_en = (row.get("주소(Eng)") or "").strip()
@@ -108,6 +162,12 @@ def process_row(row, adapter) -> dict:
         json.dumps(result.address_components, ensure_ascii=False)
         if result.address_components else ""
     )
+    out["도로명주소"] = ""
+    out["지번주소"] = ""
+
+    # KR·한글 주소에 한해 도로명주소로 강제 통일(행안부 API 후처리)
+    if juso_client and _is_kr(row.get("국가/지역")) and result.std_address:
+        _apply_juso(out, result, [addr_en, addr_local], juso_client)
     return out
 
 
@@ -123,13 +183,14 @@ def main(argv=None) -> int:
 
     mode = args.mode or os.getenv("MAPS_ADAPTER_MODE", "real")
     adapter = make_adapter(mode, api_key=os.getenv("GOOGLE_MAPS_API_KEY"))
+    juso_client = make_juso_client(os.getenv("JUSO_CONFM_KEY"))
 
     with open(args.in_path, encoding="utf-8-sig", newline="") as f:
         rows = list(csv.DictReader(f))
     if args.limit:
         rows = rows[:args.limit]
 
-    out_rows = [process_row(r, adapter) for r in rows]
+    out_rows = [process_row(r, adapter, juso_client) for r in rows]
 
     with open(args.out_path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=OUT_COLUMNS, extrasaction="ignore")

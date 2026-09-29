@@ -10,3 +10,5 @@ services:
         value: real
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: JUSO_CONFM_KEY
+        sync: false

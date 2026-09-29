@@ -17,6 +17,6 @@ COPY config/ ./config/
 COPY data/tables/ ./data/tables/
 COPY app/backend/ ./app/backend/
 COPY --from=web /web/out ./app/frontend/out
-ENV MAPS_ADAPTER_MODE=mock
+ENV MAPS_ADAPTER_MODE=real
 ENV PORT=8000
 CMD ["sh", "-c", "uvicorn main:app --app-dir app/backend --host 0.0.0.0 --port ${PORT}"]

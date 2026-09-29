@@ -10,8 +10,11 @@ import deps  # noqa: F401
 
 from STD_VLD_260917_maps_adapter import make_adapter
 from STD_VLD_260917_run_verification import process_row
+from STD_VLD_260929_juso_adapter import make_juso_client
 
 _ADAPTER = None
+_JUSO = None
+_JUSO_INIT = False
 
 
 def _get_adapter():
@@ -26,7 +29,17 @@ def _get_adapter():
     return _ADAPTER
 
 
+def _get_juso_client():
+    """지연 생성 + 캐시. JUSO_CONFM_KEY 없으면 None(도로명 변환 비활성)."""
+    global _JUSO, _JUSO_INIT
+    if not _JUSO_INIT:
+        _JUSO = make_juso_client(os.getenv("JUSO_CONFM_KEY"))
+        _JUSO_INIT = True
+    return _JUSO
+
+
 def standardize_rows(rows: list) -> list:
     """rows(한국어 컬럼 dict 리스트)를 표준화·검증한 출력 행 리스트로."""
     adapter = _get_adapter()
-    return [process_row(row, adapter) for row in rows]
+    juso = _get_juso_client()
+    return [process_row(row, adapter, juso) for row in rows]
