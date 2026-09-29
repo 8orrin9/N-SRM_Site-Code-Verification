@@ -1,14 +1,15 @@
 "use client";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TwoPane from "@/components/TwoPane";
 import PaneBox from "@/components/PaneBox";
 import DataTable from "@/components/DataTable";
 import SaveModal from "@/components/SaveModal";
 import ColumnMapModal from "@/components/ColumnMapModal";
+import TableList from "@/components/TableList";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { INPUT_COLUMNS, MAP_TARGETS } from "@/lib/columns";
-import type { SiteRow } from "@/lib/types";
+import type { SiteRow, TableMeta } from "@/lib/types";
 
 const blankRow = (): SiteRow => Object.fromEntries(INPUT_COLUMNS.map((c) => [c, ""]));
 
@@ -36,9 +37,32 @@ export default function UploadPage() {
   const [ratio, setRatio] = useState(7);
   const [saveOpen, setSaveOpen] = useState(false);
   const [pending, setPending] = useState<{ columns: string[]; rows: SiteRow[] } | null>(null);
+  const [tables, setTables] = useState<TableMeta[]>([]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
 
   const columns = rows.length ? Object.keys(rows[0]).filter((c) => c !== "No.") : INPUT_COLUMNS;
+
+  const refresh = useCallback(async () => {
+    try { setTables((await api.listTables("upload")).tables); } catch { /* noop */ }
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  // 저장된 upload 테이블을 파일 전송 없이 로드(내부망 파일 업로드 차단 대응).
+  const load = async () => {
+    if (!picked.size) { toast("불러올 테이블을 선택하세요"); return; }
+    const loaded: SiteRow[] = [];
+    for (const name of picked) {
+      try {
+        const t = await api.loadTable("upload", name);
+        t.rows.forEach((r) => loaded.push({ ...r }));
+      } catch { toast(`"${name}" 로드 실패`); }
+    }
+    setRows((prev) => [...prev, ...loaded]);
+    setPicked(new Set());
+    setRatio(3);
+    toast(`${loaded.length}행 로드 (누적 ${rows.length + loaded.length}행)`);
+  };
 
   // Confirm: 선택된 파일을 파싱해 우측 테이블을 채운다(파일 전용).
   const confirm = async () => {
@@ -90,6 +114,12 @@ export default function UploadPage() {
         <input ref={fileInput} type="file" accept=".xlsx,.xls" hidden
           onChange={(e) => { setFile(e.target.files?.[0] || null); toast("파일 선택됨 — Confirm을 누르세요"); }} />
       </div>
+      <div className="divider">또는 저장된 테이블 불러오기</div>
+      <p className="pane-note">저장된 업로드 테이블 (복수 선택 후 Load, 이어붙이기)</p>
+      <TableList tables={tables} selected={picked}
+        onToggle={(n) => setPicked((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; })}
+        onDelete={async (n) => { await api.deleteTable("upload", n); toast(`"${n}" 삭제`); refresh(); }} />
+      <div className="list-actions"><button className="btn sm" onClick={load}>Load</button></div>
       <div className="divider">또는 수기 입력</div>
       <div className="manual-grid">
         {INPUT_COLUMNS.map((c) => (
@@ -135,6 +165,7 @@ export default function UploadPage() {
         onSave={async (name, overwrite) => {
           await api.saveTable("upload", { name, columns, rows, overwrite });
           toast(`"${name}" 저장 완료`);
+          refresh();
         }} />
       <ColumnMapModal open={pending !== null} columns={pending?.columns ?? []}
         sampleRow={pending?.rows[0]}

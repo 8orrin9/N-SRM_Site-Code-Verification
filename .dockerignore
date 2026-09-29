@@ -21,6 +21,9 @@ app/frontend/.env.local
 
 # 배포에 불필요
 .git/
-data/
 documents/
 *.md
+
+# data/는 미리 넣어둔 tables/ 시드만 이미지에 포함, 원본 xlsx/csv는 제외
+data/*
+!data/tables/

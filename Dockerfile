@@ -14,6 +14,7 @@ COPY requirements-deploy.txt ./
 RUN pip install --no-cache-dir -r requirements-deploy.txt
 COPY scripts/ ./scripts/
 COPY config/ ./config/
+COPY data/tables/ ./data/tables/
 COPY app/backend/ ./app/backend/
 COPY --from=web /web/out ./app/frontend/out
 ENV MAPS_ADAPTER_MODE=mock
