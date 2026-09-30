@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toast } from "@/lib/toast";
 
 // 공용 저장 모달. 이름 입력 → Save(1차) → "확정" → Save(2차)로 최종 저장.
 // onSave가 FileExistsError(409)를 던지면 덮어쓰기 옵션을 노출한다.
@@ -34,6 +35,7 @@ export default function SaveModal({
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.status === 409) { setConflict(true); setConfirmed(false); }
+      else { toast(err.message || "저장 실패 — 다시 시도해주세요"); }
       setBusy(false);
     }
   };

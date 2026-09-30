@@ -115,6 +115,10 @@ export default function SimilarityPage() {
   const editStdCell = (i: number, col: string, value: string) =>
     setStdRows((prev) => prev.map((r, k) => (k === i ? { ...r, [col]: value } : r)));
   const deleteStdRow = (i: number) => setStdRows((prev) => prev.filter((_, k) => k !== i));
+  const toggleStdStatus = (i: number) => setStdRows((prev) => prev.map((r, k) => {
+    if (k !== i || r["표준화"] === "실패") return r;
+    return { ...r, "표준화": r["표준화"] === "검증 완료" ? "확인 필요" : "검증 완료" };
+  }));
 
   // 1단계: 확인할 데이터 표준화 → 표준화 결과 섹션 노출
   const standardizeQuery = async () => {
@@ -214,7 +218,8 @@ export default function SimilarityPage() {
           </div>
           <p className="pane-note">표준화된 값(STD 업체명·좌표·주소)으로 기준 테이블과 비교합니다. 셀을 클릭해 값을 수정한 뒤 Similarity Search를 누르세요.</p>
           <DataTable columns={STD_DISPLAY_COLS} rows={stdRows} stdCols={STD_COLUMNS} editable
-            flash={flash} onEditCell={editStdCell} onDeleteRow={deleteStdRow} />
+            flash={flash} onToggleStatus={toggleStdStatus}
+            onEditCell={editStdCell} onDeleteRow={deleteStdRow} />
         </div>
       )}
     </PaneBox>

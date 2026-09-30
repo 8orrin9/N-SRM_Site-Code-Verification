@@ -11,8 +11,11 @@ async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   if (!res.ok) {
-    let detail = res.statusText;
-    try { detail = (await res.json()).detail || detail; } catch { /* noop */ }
+    let detail = "";
+    try { detail = (await res.json()).detail || ""; } catch { /* noop */ }
+    // res.statusText는 HTTP/2 응답에서 항상 빈 문자열일 수 있어(브라우저 스펙),
+    // 그 경우 상태 코드만이라도 남겨 "빈 에러 메시지로 인한 무의미한 toast"를 막는다.
+    if (!detail) detail = res.statusText || `HTTP ${res.status}`;
     const err = new Error(detail) as Error & { status?: number };
     err.status = res.status;
     throw err;
