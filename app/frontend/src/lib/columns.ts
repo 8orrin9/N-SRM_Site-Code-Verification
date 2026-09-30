@@ -1,5 +1,6 @@
 // schema.py(BASE_COLUMNS/EXTRA_COLUMNS)와 수동 동기화되는 컬럼 상수.
 // 백엔드가 한국어 컬럼 키를 그대로 주고받으므로 프론트도 동일 키를 사용한다.
+import type { SiteRow } from "./types";
 
 export const BASE_COLUMNS = [
   "No.", "Status", "Site Code", "Site 유형", "업체", "항구/공항 코드",
@@ -43,4 +44,21 @@ const COLUMN_ALIASES: Record<string, string> = {
 export function guessTarget(col: string): string {
   if (MAP_TARGETS.includes(col)) return col;
   return COLUMN_ALIASES[col] || "";
+}
+
+// 매핑을 적용해 원본 행을 표준 컬럼명 행으로 변환.
+// 매핑된 표준 컬럼(MAP_TARGETS 순) + 매핑되지 않은 원본 컬럼(참고용 보존) 순서.
+export function applyMapping(rows: SiteRow[], mapping: Record<string, string>): SiteRow[] {
+  return rows.map((row) => {
+    const out: SiteRow = {};
+    MAP_TARGETS.forEach((tgt) => {
+      const src = Object.keys(mapping).find((s) => mapping[s] === tgt);
+      if (src !== undefined) out[tgt] = row[src] ?? "";
+    });
+    for (const [k, v] of Object.entries(row)) {
+      if (k === "No." || mapping[k]) continue; // 매핑된 원본은 표준명으로 이동됨
+      if (!(k in out)) out[k] = v;
+    }
+    return out;
+  });
 }

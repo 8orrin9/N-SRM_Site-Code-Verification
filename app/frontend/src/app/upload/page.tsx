@@ -8,27 +8,10 @@ import ColumnMapModal from "@/components/ColumnMapModal";
 import TableList from "@/components/TableList";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { INPUT_COLUMNS, MAP_TARGETS } from "@/lib/columns";
+import { INPUT_COLUMNS, MAP_TARGETS, applyMapping } from "@/lib/columns";
 import type { SiteRow, TableMeta } from "@/lib/types";
 
 const blankRow = (): SiteRow => Object.fromEntries(INPUT_COLUMNS.map((c) => [c, ""]));
-
-// 매핑을 적용해 원본 행을 표준 컬럼명 행으로 변환.
-// 매핑된 표준 컬럼(MAP_TARGETS 순) + 매핑되지 않은 원본 컬럼(참고용 보존) 순서.
-function applyMapping(rows: SiteRow[], mapping: Record<string, string>): SiteRow[] {
-  return rows.map((row) => {
-    const out: SiteRow = {};
-    MAP_TARGETS.forEach((tgt) => {
-      const src = Object.keys(mapping).find((s) => mapping[s] === tgt);
-      if (src !== undefined) out[tgt] = row[src] ?? "";
-    });
-    for (const [k, v] of Object.entries(row)) {
-      if (k === "No." || mapping[k]) continue; // 매핑된 원본은 표준명으로 이동됨
-      if (!(k in out)) out[k] = v;
-    }
-    return out;
-  });
-}
 
 export default function UploadPage() {
   const [rows, setRows] = useState<SiteRow[]>([]);

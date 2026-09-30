@@ -1,15 +1,16 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TwoPane from "@/components/TwoPane";
 import PaneBox from "@/components/PaneBox";
 import DataTable from "@/components/DataTable";
 import TableList from "@/components/TableList";
 import ResultDock from "@/components/ResultDock";
 import Drawer from "@/components/Drawer";
+import ColumnMapModal from "@/components/ColumnMapModal";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { avgClass, scoreBadge, rowLabel } from "@/lib/ui";
-import { INPUT_COLUMNS, STD_COLUMNS } from "@/lib/columns";
+import { INPUT_COLUMNS, STD_COLUMNS, MAP_TARGETS, applyMapping } from "@/lib/columns";
 import type { QueryResult, SimMatch, SiteRow, TableMeta } from "@/lib/types";
 
 const blankRow = (): SiteRow => Object.fromEntries(INPUT_COLUMNS.map((c) => [c, ""]));
@@ -21,6 +22,12 @@ export default function SimilarityPage() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [refRows, setRefRows] = useState<SiteRow[]>([]);
   const [queryRows, setQueryRows] = useState<SiteRow[]>([blankRow()]);
+  // 확인할 데이터 로드용 상태 (좌측 기준 테이블 로드와 분리)
+  const [qTables, setQTables] = useState<TableMeta[]>([]);
+  const [qPicked, setQPicked] = useState<Set<string>>(new Set());
+  const [qFile, setQFile] = useState<File | null>(null);
+  const [qPending, setQPending] = useState<{ columns: string[]; rows: SiteRow[] } | null>(null);
+  const qFileInput = useRef<HTMLInputElement>(null);
   const [stdRows, setStdRows] = useState<SiteRow[]>([]);
   const [results, setResults] = useState<QueryResult[]>([]);
   const [dockOpen, setDockOpen] = useState(false);
@@ -32,6 +39,7 @@ export default function SimilarityPage() {
 
   const refresh = useCallback(async () => {
     try { setTables((await api.listTables("deduped")).tables); } catch { /* noop */ }
+    try { setQTables((await api.listTables("upload")).tables); } catch { /* noop */ }
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -57,6 +65,52 @@ export default function SimilarityPage() {
   const invalidate = () => { setStdRows([]); setResults([]); setDockOpen(false); };
   const onEditQuery = (i: number, col: string, value: string) => { editCell(i, col, value); invalidate(); };
   const onDeleteQuery = (i: number) => { deleteRow(i); invalidate(); };
+
+  // 로드된 행을 확인할 데이터에 추가. 초기 빈 행 하나만 있으면 대체, 아니면 이어붙임.
+  const appendQueryRows = (loaded: SiteRow[]) => {
+    if (!loaded.length) return;
+    setQueryRows((prev) => {
+      const isInitialBlank = prev.length === 1 && INPUT_COLUMNS.every((c) => !(prev[0][c] || "").trim());
+      return isInitialBlank ? loaded : [...prev, ...loaded];
+    });
+    invalidate();
+  };
+
+  // 저장된 upload 테이블에서 확인할 데이터 로드(파일 전송 없이 — 내부망 대응).
+  const loadQuery = async () => {
+    if (!qPicked.size) { toast("불러올 테이블을 선택하세요"); return; }
+    const loaded: SiteRow[] = [];
+    for (const name of qPicked) {
+      try {
+        const t = await api.loadTable("upload", name);
+        t.rows.forEach((r) => loaded.push({ ...r }));
+      } catch { toast(`"${name}" 로드 실패`); }
+    }
+    appendQueryRows(loaded);
+    setQPicked(new Set());
+    toast(`${loaded.length}행 로드`);
+  };
+
+  // 파일 업로드 → 파싱 → 표준 컬럼이면 바로 추가, 아니면 컬럼 매핑 모달.
+  const confirmQueryFile = async () => {
+    if (!qFile) { toast("업로드할 파일을 먼저 선택하세요"); return; }
+    try {
+      const res = await api.parseUpload(qFile);
+      const srcCols = res.columns.filter((c) => c !== "No.");
+      const needsMapping = srcCols.some((c) => !MAP_TARGETS.includes(c));
+      if (needsMapping) {
+        setQPending({ columns: srcCols, rows: res.rows });
+        toast(`파싱 완료 — 컬럼 매핑이 필요합니다 (${res.rows.length}행)`);
+      } else {
+        appendQueryRows(res.rows);
+        toast(`파일 파싱 완료 — ${res.rows.length}행 추가`);
+      }
+      setQFile(null);
+      if (qFileInput.current) qFileInput.current.value = "";
+    } catch (e) {
+      toast((e as Error).message || "파싱 실패");
+    }
+  };
 
   const editStdCell = (i: number, col: string, value: string) =>
     setStdRows((prev) => prev.map((r, k) => (k === i ? { ...r, [col]: value } : r)));
@@ -126,6 +180,22 @@ export default function SimilarityPage() {
       <button className="btn ghost sm" onClick={() => { setQueryRows((p) => [...p, blankRow()]); }}>+ 행 추가</button>
       <button className="btn primary" onClick={standardizeQuery}>Standardization</button>
     </>}>
+      <div className="drop" onClick={() => qFileInput.current?.click()}>
+        <div className="big">⬆</div>
+        <div><b>xlsx 파일 업로드</b> (클릭하여 선택)</div>
+        <div style={{ marginTop: 4, fontSize: "11.5px" }}>확인할 데이터를 파일에서 불러옵니다</div>
+        {qFile && <div style={{ marginTop: 8, color: "var(--blue)", fontWeight: 700 }}>{qFile.name}</div>}
+        <input ref={qFileInput} type="file" accept=".xlsx,.xls" hidden
+          onChange={(e) => { setQFile(e.target.files?.[0] || null); toast("파일 선택됨 — 파일 불러오기를 누르세요"); }} />
+      </div>
+      <div className="list-actions"><button className="btn sm" onClick={confirmQueryFile}>파일 불러오기</button></div>
+      <div className="divider">또는 저장된 업로드 테이블 불러오기</div>
+      <p className="pane-note">저장된 업로드 테이블 (복수 선택 후 Load, 이어붙이기)</p>
+      <TableList tables={qTables} selected={qPicked}
+        onToggle={(n) => setQPicked((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; })}
+        onDelete={async (n) => { await api.deleteTable("upload", n); toast(`"${n}" 삭제`); refresh(); }} />
+      <div className="list-actions"><button className="btn sm" onClick={loadQuery}>Load</button></div>
+      <div className="divider">또는 수기 입력</div>
       {queryRows.length ? (
         <>
           <div className="tbl-toolbar"><span className="count">{queryRows.length}행 · 셀 클릭 편집</span></div>
@@ -212,6 +282,16 @@ export default function SimilarityPage() {
         onClose={() => setDrawerQi(null)}>
         {drawerRes && <DetailRanking key={drawerQi} matches={drawerRes.matches} />}
       </Drawer>
+
+      <ColumnMapModal open={qPending !== null} columns={qPending?.columns ?? []}
+        sampleRow={qPending?.rows[0]}
+        onClose={() => setQPending(null)}
+        onApply={(mapping) => {
+          if (!qPending) return;
+          appendQueryRows(applyMapping(qPending.rows, mapping));
+          setQPending(null);
+          toast(`컬럼 매핑 적용 — ${qPending.rows.length}행 추가`);
+        }} />
     </>
   );
 }
