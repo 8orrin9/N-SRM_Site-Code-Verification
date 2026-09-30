@@ -1,0 +1,70 @@
+{
+  "name": "고객Pair_확인",
+  "menu": "upload",
+  "columns": [
+    "업체",
+    "기업식별 코드",
+    "Duns No.",
+    "국가/지역",
+    "주소(Eng)",
+    "위도",
+    "경도"
+  ],
+  "rows": [
+    {
+      "업체": "UJL Inc.",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "87 Gunjacheon-ro 21beon-gil  Siheung  15101 KR",
+      "위도": "37.3286041",
+      "경도": "126.7066758"
+    },
+    {
+      "업체": "SULIM COMMERCE Co., Ltd.",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "Rm 623 Anyang Mega Valley Bldg. 268 Hagui-ro, Dongan-gu  Anyang  14056 KR",
+      "위도": "37.40213",
+      "경도": "126.968934"
+    },
+    {
+      "업체": "LAKE MATERIALS Co., Ltd.(천안사업장)",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "충청남도 천안시 동남구 성남면 5산단4로 41",
+      "위도": "36.7440238",
+      "경도": "127.2572511"
+    },
+    {
+      "업체": "Hyosung Heavy Industry Changwon E Factory Co., Ltd.",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "144 Yeondeok-ro, Seongsan-gu  Changwon  51528 KR",
+      "위도": "35.2156047",
+      "경도": "128.6670729"
+    },
+    {
+      "업체": "SUMISEI CHEMICAL CO,,LTD.",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "284 LCD-ro, Wollong-myeon  Paju  10845 KR",
+      "위도": "37.8167334",
+      "경도": "126.755244"
+    },
+    {
+      "업체": "LG Chemical",
+      "기업식별 코드": "",
+      "Duns No.": "",
+      "국가/지역": "KR:한국",
+      "주소(Eng)": "10-17 Taejeon-ro 7-gil Buk-gu  Daegu  41456 KR",
+      "위도": "35.9234979",
+      "경도": "128.5427486"
+    }
+  ],
+  "saved_at": "2026-09-30T19:01:50+09:00"
+}
