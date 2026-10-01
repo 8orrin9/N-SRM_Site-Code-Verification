@@ -12,5 +12,19 @@
     "slug": "유사_검색_대상_Site",
     "row_count": 6,
     "saved_at": "2026-10-01T00:08:55+00:00"
+  },
+  {
+    "name": "Test Data",
+    "menu": "standardized",
+    "slug": "Test_Data",
+    "row_count": 47,
+    "saved_at": "2026-10-01T04:40:07+00:00"
+  },
+  {
+    "name": "Test Data",
+    "menu": "deduped",
+    "slug": "Test_Data",
+    "row_count": 41,
+    "saved_at": "2026-10-01T04:40:07+00:00"
   }
 ]
