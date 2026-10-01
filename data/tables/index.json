@@ -1,51 +1,30 @@
 [
   {
-    "name": "Test_260926",
+    "name": "Test Data",
     "menu": "upload",
-    "slug": "Test_260926",
-    "row_count": 41,
-    "saved_at": "2026-09-26T20:03:37+09:00"
+    "slug": "Test_Data",
+    "row_count": 47,
+    "saved_at": "2026-10-01T00:08:55+00:00"
   },
   {
-    "name": "Test_260926",
+    "name": "Test Data",
     "menu": "standardized",
-    "slug": "Test_260926",
+    "slug": "Test_Data",
+    "row_count": 48,
+    "saved_at": "2026-10-01T00:08:55+00:00"
+  },
+  {
+    "name": "Test Data",
+    "menu": "deduped",
+    "slug": "Test_Data",
     "row_count": 42,
-    "saved_at": "2026-09-26T20:10:41+09:00"
+    "saved_at": "2026-10-01T00:08:55+00:00"
   },
   {
-    "name": "Test_260926",
-    "menu": "deduped",
-    "slug": "Test_260926",
-    "row_count": 36,
-    "saved_at": "2026-09-26T20:19:28+09:00"
-  },
-  {
-    "name": "Test_260930",
+    "name": "유사 검색 대상 Site",
     "menu": "upload",
-    "slug": "Test_260930",
+    "slug": "유사_검색_대상_Site",
     "row_count": 6,
-    "saved_at": "2026-09-30T19:01:50+09:00"
-  },
-  {
-    "name": "Test_260930",
-    "menu": "standardized",
-    "slug": "Test_260930",
-    "row_count": 6,
-    "saved_at": "2026-09-30T19:01:50+09:00"
-  },
-  {
-    "name": "Test_260930",
-    "menu": "deduped",
-    "slug": "Test_260930",
-    "row_count": 6,
-    "saved_at": "2026-09-30T19:01:50+09:00"
-  },
-  {
-    "name": "고객Pair_확인",
-    "menu": "upload",
-    "slug": "고객Pair_확인",
-    "row_count": 6,
-    "saved_at": "2026-09-30T19:01:50+09:00"
+    "saved_at": "2026-10-01T00:08:55+00:00"
   }
 ]

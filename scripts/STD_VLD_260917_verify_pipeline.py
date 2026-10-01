@@ -249,15 +249,17 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -
                 place_id=g["place_id_g"], reference_url=_place_url(g["place_id_g"]),
                 address_components=g["address_components_g"],
                 method_trace=["G", "TS_old", "CMP"])
-        # MISMATCH → 확인 필요, 두 후보 addressComponents·place URL 병존
+        # MISMATCH → 확인 필요, 두 후보 addressComponents는 병존하되 참조 URL은
+        # 실제 업체(POI) place_id인 ts_old 쪽만 제공한다. g["place_id_g"]는 지오코딩이
+        # 만든 "주소 자체"의 place_id라 실업체가 아니며, Google Maps 웹의
+        # ?q=place_id: 오프너가 이런 place_id를 열지 못해 빈 화면(홈)으로 떨어진다.
         both = list(g["address_components_g"]) + list(ts_old["address_components_t"])
         return make_result(
             gc.UNVERIFIED_PLACEID_MISMATCH,
             note="표준·기존 좌표에서 서로 다른 업체 발견 → 동명이업체/위치오류 의심(두 후보 제시)",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=" | ".join([_place_url(g["place_id_g"]),
-                                      _place_url(ts_old["place_id_t"])]),
+            reference_url=_place_url(ts_old["place_id_t"]),
             address_components=both,
             method_trace=["G", "TS_old", "CMP"])
 

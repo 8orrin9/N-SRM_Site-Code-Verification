@@ -14,7 +14,7 @@ import { INPUT_COLUMNS, STD_COLUMNS, MAP_TARGETS, applyMapping } from "@/lib/col
 import type { QueryResult, SimMatch, SiteRow, TableMeta } from "@/lib/types";
 
 const blankRow = (): SiteRow => Object.fromEntries(INPUT_COLUMNS.map((c) => [c, ""]));
-const REF_COLS = ["업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)"];
+const REF_COLS = ["업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)", "STD 주소"];
 const STD_DISPLAY_COLS = [...INPUT_COLUMNS, ...STD_COLUMNS];
 
 export default function SimilarityPage() {
@@ -172,7 +172,7 @@ export default function SimilarityPage() {
       {refRows.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <div className="tbl-toolbar"><span className="count">기준 {refRows.length}행</span></div>
-          <DataTable columns={REF_COLS} rows={refRows} stdCols={["STD 업체명"]} />
+          <DataTable columns={REF_COLS} rows={refRows} stdCols={["STD 업체명", "STD 주소"]} />
         </div>
       )}
     </PaneBox>
