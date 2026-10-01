@@ -243,10 +243,33 @@ def address_gate(row_a, row_b):
     return SIMILAR if similar_seen else DIFFERENT
 
 
+# 게이트 4가 "건물/필지 단위" 정밀도로 간주하는 최소 레벨(그 이상 하위 레벨은
+# 현재 ADDRESS_LEVELS에서 추적하지 않음 — route/street_number가 가장 하위).
+COORD_GATE_MIN_LEVELS = frozenset(["route", "street_number"])
+
+
+def _has_building_level_address(components) -> bool:
+    """addressComponents가 건물/필지 단위(도로/번지)까지 존재하는지."""
+    return bool(_levels_map(components).keys() & COORD_GATE_MIN_LEVELS)
+
+
 def coord_gate(row_a, row_b):
-    """게이트 4: 좌표 거리(Haversine). 근접하면 주소 레벨 무관 EQUAL."""
+    """게이트 4: 좌표 거리(Haversine).
+
+    주소 레벨이 건물/필지 단위(route/street_number)까지 있는 두 좌표끼리만
+    "거리가 가까우면 같은 자리"로 판단한다. 한쪽이라도 그보다 상위 단위(도시/
+    행정구역 등)의 주소만 가진 경우, 그 좌표는 대개 행정구역 중심점 등 대표점일
+    뿐이라 가까운 것 자체가 "같은 Site"를 의미하지 않는다(서로 다른 두 Site가
+    같은 시/구 중심좌표로 입력돼 우연히 EQUAL로 묶이는 오탐을 차단). 이 경우
+    거리와 무관하게 SKIP — DIFFERENT로도 단정하지 않는 것은, 정보가 부족한
+    상태에서의 "멀다"가 "다른 업체"를 보증하지 않기 때문(다른 게이트들의 SKIP
+    처리와 동일한 원칙).
+    """
     ca, cb = row_a.get("coord"), row_b.get("coord")
     if not ca or not cb:
+        return SKIP
+    if not (_has_building_level_address(row_a.get("components")) and
+            _has_building_level_address(row_b.get("components"))):
         return SKIP
     return EQUAL if gc.haversine(ca, cb) <= COORD_EQUAL_M else DIFFERENT
 

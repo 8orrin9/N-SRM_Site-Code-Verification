@@ -39,8 +39,8 @@
 | 그룹 | n | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|---|---|
 | class:TP_variant | 136 | 100 | 100 | 100 | 100 | 100 | 100.0 |
-| class:TP_composite | 68 | 35 | 35 | 93 | 96 | 99 | 76.3 |
-| variant:combo:combo_mid | 23 | 49 | 90 | 93 | 95 | 96 | 88.9 |
+| class:TP_composite | 68 | 35 | 35 | 93 | 96 | 99 | 76.4 |
+| variant:combo:combo_mid | 23 | 49 | 90 | 93 | 95 | 99 | 89.0 |
 | variant:combo:combo_mid_high | 26 | 85 | 95 | 96 | 98 | 99 | 95.4 |
 | variant:combo:combo_low_veto | 19 | 35 | 35 | 35 | 35 | 35 | 35.0 |
 | difficulty:easy | 50 | 100 | 100 | 100 | 100 | 100 | 100.0 |
@@ -86,11 +86,11 @@
 |---|---|---|---|---|
 | EQUAL | 29 | 0 | 0 | 0 |
 
-### coord (정합 41/41)
+### coord (정합 24/41)
 | 기대\실제 | EQUAL | SIMILAR | DIFFERENT | SKIP |
 |---|---|---|---|---|
-| EQUAL | 9 | 0 | 0 | 0 |
-| DIFFERENT | 0 | 0 | 23 | 0 |
+| EQUAL | 4 | 0 | 0 | 5 |
+| DIFFERENT | 0 | 0 | 11 | 12 |
 | SKIP | 0 | 0 | 0 | 9 |
 
 ## 임계값 튜닝 스윕 (one-at-a-time)

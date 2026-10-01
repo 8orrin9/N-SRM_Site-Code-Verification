@@ -14,7 +14,7 @@ Q0167,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
 Q0169,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
 Q0172,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
 Q0173,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
-Q0174,TP_composite,combo:combo_mid,96,오매핑,top1=E012 != E020
+Q0174,TP_composite,combo:combo_mid,99,오매핑,top1=E012 != E020
 Q0177,TP_composite,combo:combo_mid,93,오매핑,top1=E008 != E022
 Q0178,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
 Q0181,TP_composite,combo:combo_low_veto,35,매핑실패_신규채번,score=35<60
