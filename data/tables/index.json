@@ -7,20 +7,6 @@
     "saved_at": "2026-10-01T00:08:55+00:00"
   },
   {
-    "name": "Test Data",
-    "menu": "standardized",
-    "slug": "Test_Data",
-    "row_count": 48,
-    "saved_at": "2026-10-01T00:08:55+00:00"
-  },
-  {
-    "name": "Test Data",
-    "menu": "deduped",
-    "slug": "Test_Data",
-    "row_count": 42,
-    "saved_at": "2026-10-01T00:08:55+00:00"
-  },
-  {
     "name": "유사 검색 대상 Site",
     "menu": "upload",
     "slug": "유사_검색_대상_Site",
