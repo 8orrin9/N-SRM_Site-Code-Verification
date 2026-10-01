@@ -11,7 +11,7 @@ import { toast } from "@/lib/toast";
 import { rowLabel, mapUrls } from "@/lib/ui";
 import type { Cluster, SiteRow, Suspect, TableMeta, DedupThresholds } from "@/lib/types";
 
-const DISPLAY_COLS = ["업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)"];
+const DISPLAY_COLS = ["업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)", "STD 주소"];
 
 export default function DedupPage() {
   const [tables, setTables] = useState<TableMeta[]>([]);
@@ -157,7 +157,7 @@ export default function DedupPage() {
       {rows.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <div className="tbl-toolbar"><span className="count">{rows.length}행 · 행 선택 후 “+ 선택으로 클러스터” 또는 클러스터의 “+ 선택 추가”</span></div>
-          <DataTable columns={DISPLAY_COLS} rows={rows} stdCols={["STD 업체명"]}
+          <DataTable columns={DISPLAY_COLS} rows={rows} stdCols={["STD 업체명", "STD 주소"]}
             selectable selected={selected} onToggleRow={toggleRow} onToggleAll={toggleAll} />
         </div>
       )}
@@ -238,7 +238,7 @@ export default function DedupPage() {
       <ResultDock show={dockOpen} title="중복 제거 결과" onClose={() => setDockOpen(false)}>
         <p className="pane-note">선택한 대표 행만 남기고 중복 행을 병합했습니다.</p>
         <div className="tbl-toolbar"><span className="count">{rows.length}행 → <b>{applied.length}행</b></span></div>
-        <DataTable columns={DISPLAY_COLS} rows={applied} stdCols={["STD 업체명"]} />
+        <DataTable columns={DISPLAY_COLS} rows={applied} stdCols={["STD 업체명", "STD 주소"]} />
       </ResultDock>
       <SaveModal open={saveOpen} rowCount={applied.length} onClose={() => setSaveOpen(false)}
         onSave={async (name, overwrite) => {
