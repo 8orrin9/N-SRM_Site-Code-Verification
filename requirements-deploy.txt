@@ -8,6 +8,7 @@ rapidfuzz==3.14.3
 openpyxl==3.1.5
 et_xmlfile==2.0.0
 requests==2.34.2
+openai==2.43.0
 PyYAML==6.0.3
 python-dotenv==1.2.2
 python-multipart==0.0.32

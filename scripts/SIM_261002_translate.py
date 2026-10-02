@@ -15,7 +15,10 @@ detect_and_translate(name): 업체명 1건에 대해 ISO 639-1 언어코드와 �
 """
 
 import json
+import logging
 import os
+
+_LOG = logging.getLogger(__name__)
 
 _MODEL = os.getenv("OPENAI_TRANSLATE_MODEL", "gpt-4o-mini")
 
@@ -31,11 +34,14 @@ def _get_client():
     if not _CLIENT_INIT:
         _CLIENT_INIT = True
         key = os.getenv("OPENAI_API_KEY")
-        if key:
+        if not key:
+            _LOG.warning("OPENAI_API_KEY 미설정 → 업체명 번역 비활성(원본 폴백)")
+        else:
             try:
                 from openai import OpenAI
                 _CLIENT = OpenAI(api_key=key)
-            except Exception:
+            except Exception as e:
+                _LOG.warning("openai 클라이언트 생성 실패 → 번역 비활성(원본 폴백): %s", e)
                 _CLIENT = None
     return _CLIENT
 
@@ -107,7 +113,8 @@ def _llm_translate(name: str):
         if not name_eng:
             return None
         return {"lang": lang or _heuristic_lang(name), "name_eng": name_eng}
-    except Exception:
+    except Exception as e:
+        _LOG.warning("업체명 번역 호출 실패 → 원본 폴백 (%r): %s", name, e)
         return None
 
 
