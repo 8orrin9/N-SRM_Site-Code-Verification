@@ -3,49 +3,57 @@
 > 본 문서는 「Site Code 채번 고도화_260916_Process Map_주소 표준화 및 실재 검증」의 후속으로,
 > **한국(KR) 주소를 도로명주소로 통일**하기 위해 행안부 도로명주소 검색 API를 주소 표준화
 > 파이프라인에 어떻게 삽입했는지, 그로 인해 결과가 어떻게 달라지는지를 정리한다.
+>
+> **개정 이력(2026-10-02):** 초기 설계는 Geocoding *이전*에 행안부를 호출하는 **선(先)처리**
+> 방식이었으나, 실재검증(Case C 등) 뒷단이 TextSearch POI의 주소로 `STD 주소`를 덮어써
+> 지번/혼재 주소가 그대로 남는 문제가 확인되었다. 이에 **실재검증으로 `STD 주소`가 확정된
+> *이후*에 행안부로 통일하는 후(後)처리 방식으로 전면 전환**했다. 본 문서는 후처리 설계를 기준으로 한다.
 
 ---
 
 ## 1. 배경 — 왜 행안부 API가 필요한가
 
 한국의 주소체계는 **지번(地番)** 과 **도로명** 두 가지가 병존한다. 문제는 Google
-Geocoding API가 **출력 주소체계를 강제하는 파라미터를 제공하지 않는다**는 점이다.
-`RealMapsAdapter.G()`가 채택하는 `formatted_address`는 입력이 지번이면 지번으로,
-도로명이면 도로명으로 표준화되어 **KR 주소가 지번/도로명 혼재**로 남는다.
+Geocoding/Places API가 **출력 주소체계를 강제하는 파라미터를 제공하지 않는다**는 점이다.
+채택되는 `formatted_address`는 입력이 지번이면 지번으로 남고, 실재검증 과정에서 TextSearch로
+찾은 POI의 주소가 채택되면 **지번·혼재 표기**로 굳는다.
 
 **실측 확인 사항:**
 
-- Geocoding에는 출력 체계를 도로명으로 강제하는 옵션이 없다.
+- Geocoding/Places에는 출력 체계를 도로명으로 강제하는 옵션이 없다.
 - `language=ko` 파라미터는 **출력을 한글화할 뿐 지번↔도로명 변환은 하지 못한다.**
 - 지번↔도로명 **주소체계 변환이 가능한 것은 행안부 API뿐**이다.
+- `languageCode`를 지정하지 않으면 Google은 **번역 데이터가 있는 레벨만 영문, 세부 동(洞)은
+  한글**로 조립해 **혼재 주소**를 만든다(예: `South Korea, …Yeongtong-gu, 원천동 471`).
 
-| 입력 주소 | (변환 없이) Google Geocoding 결과 |
+| 실재검증 후 STD 주소(변환 없이) | 문제 |
 |---|---|
-| `천호동 164-70` (지번) | `164-70 Cheonho-dong, Gangdong-gu, Seoul, South Korea` — **지번 유지** ❌ |
+| `South Korea, Incheon, Seo-gu, 가좌3동 548-1` | 지번 + 영/한 혼재 ❌ |
+| `South Korea, Gyeonggi-do, Suwon, Yeongtong-gu, 원천동 471` | 지번 + 영/한 혼재 ❌ |
 
-목표는 **어느 체계로 입력되든 표준 주소를 도로명으로 통일**하는 것이다.
-(영문 도로명 출력은 허용 — 지번이기만 하지 않으면 된다.)
+목표는 **최종 STD 주소를 한글 도로명주소로 통일**하는 것이다.
 
 ---
 
-## 2. 결정사항 (사용자 확정)
+## 2. 결정사항 (사용자 확정, 2026-10-02)
 
 | 항목 | 결정 |
 |---|---|
-| **적용 대상** | `국가/지역`이 KR **이면서 한글로 기재된 주소**가 있는 레코드만 |
-| **적용 시점** | **행안부 선(先) → Geocoding 후(後)** — 지번→도로명 변환을 Geocoding *이전*에 수행 |
-| **검색 입력** | `주소(Eng)`/`주소(Local)` 중 **한글인 값**을 keyword로 사용 |
-| **Geocoding 입력 치환** | 변환된 도로명주소를 **유일한 Geocoding 입력**으로 치환 |
-| **`language` 파라미터** | **건드리지 않음** — 영문 도로명 출력 OK |
+| **적용 대상** | `국가/지역`이 KR **이면서 STD 주소가 확정된** 레코드 (한글 입력 여부 무관) |
+| **적용 시점** | **실재검증 후(後)처리** — `STD 주소` 확정 이후 도로명으로 통일 |
+| **깨끗한 한글 주소 확보** | 확정된 `place_id`(없으면 좌표)로 **`language=ko` Geocoding 재조회** |
+| **행안부 검색 입력** | ko 주소에서 **시도·시군구·꼬리(건물명·층·호·국가코드)를 제거한 "동/도로명~번지"** |
+| **동명이동 처리** | 후보 다건 조회 후 **시도 일치 필수 + 시군구 일치 선호**로 교차검증 채택 |
+| **STD 주소 표기** | **한글 도로명**(괄호 참고항목 제거)으로 교체 |
 | **컬럼 반영** | `도로명주소`/`지번주소` 컬럼에 행안부 원본 저장 |
-| **실패/오류 시** | 기존 Google 경로로 폴백(파이프라인 중단 없음) |
+| **실패/오류 시** | 기존 Google STD 주소로 폴백(파이프라인 중단 없음) |
 
-> **한글 주소만 대상으로 하는 이유**: 행안부 검색 API(`addrLinkApi.do`)는 한글 주소일 때만
-> 정확히 매칭되고 영문 주소는 매칭률이 낮다. 한글 주소가 없는 KR 레코드는 애초에 제외한다.
+> **"후처리"로 바꾼 이유**: 선처리는 Geocoding *입력*만 도로명으로 바꿀 뿐, Case C에서 좌표
+> 정합 시 TextSearch POI의 `formattedAddress`가 `STD 주소`로 채택되는 뒷단 덮어쓰기를 막지
+> 못한다. 최종 `STD 주소`가 확정된 뒤에 통일해야 지번/혼재가 남지 않는다.
 
-> **"선처리"를 택한 이유**: Geocoding은 지번↔도로명 변환을 못 하므로, Geocoding *이후에*
-> 행안부를 호출해봐야 이미 지번으로 굳은 결과를 되돌릴 수 없다. 따라서 **입력 자체를
-> 도로명으로 바꿔서** Geocoding에 넣어야 표준 주소가 도로명으로 나온다.
+> **`language=ko` 재조회가 필요한 이유**: 행안부 검색 API는 영문/혼재 주소를 매칭하지 못한다
+> (실측). 확정된 place_id/좌표를 ko로 재조회하면 **전부 한글인 주소**를 얻어 행안부에 넘길 수 있다.
 
 ---
 
@@ -55,55 +63,59 @@ Geocoding API가 **출력 주소체계를 강제하는 파라미터를 제공하
 
 | 서브루틴 | 내용 | 출력 |
 |---|---|---|
-| **J**(keyword) | 행안부 도로명주소 검색 API 실행 (`addrLinkApi.do`). 지번/도로명 어느 keyword로 검색하든 응답의 `roadAddr`(전체 도로명주소)를 반환 | `road_addr`(도로명 전체), `jibun_addr`(지번), `zip_no`(우편번호), `eng_addr`(영문 도로명) |
+| **J**(keyword, count) | 행안부 도로명주소 검색 API 실행 (`addrLinkApi.do`). 지번/도로명 어느 keyword로 검색하든 응답의 `roadAddr`를 반환하며, **동명이동 교차검증을 위해 후보 다건**과 각 후보의 **시도(`siNm`)·시군구(`sggNm`)**를 함께 반환 | 후보 리스트: `road_addr`, `jibun_addr`, `zip_no`, `eng_addr`, `si_nm`, `sgg_nm` |
 
 **API 사양**
 
 - 엔드포인트: `GET https://business.juso.go.kr/addrlink/addrLinkApi.do`
-- 파라미터: `confmKey`(승인키), `keyword`, `currentPage=1`, `countPerPage=1`, `resultType=json`
-- 응답: `results.common.errorCode`(`"0"`=정상), `results.juso[0]`에
-  `roadAddr` / `jibunAddr` / `zipNo` / `engAddr`
-- 실패 처리: `errorCode != "0"`, `juso` 비어있음, 네트워크/타임아웃/파싱 예외 → 모두 `None` 반환
-  (호출부가 기존 Google 경로로 폴백)
-- 좌표는 반환하지 않음 → **좌표·실재검증은 여전히 Geocoding이 담당**
+- 파라미터: `confmKey`(승인키), `keyword`, `currentPage=1`, `countPerPage=N`, `resultType=json`
+- 응답: `results.common.errorCode`(`"0"`=정상), `results.juso[]`에
+  `roadAddr` / `jibunAddr` / `zipNo` / `engAddr` / `siNm` / `sggNm`
+- 실패 처리: `errorCode != "0"`, `juso` 비어있음, 네트워크/타임아웃/파싱 예외 → **빈 리스트** 반환
+  (호출부가 기존 Google STD 주소로 폴백)
+- 좌표는 반환하지 않음 → **좌표·실재검증은 여전히 Geocoding/Places가 담당**
 
-> **승인키 미설정 시**: `make_juso_client(None)` → 클라이언트 `None` → KR 선처리 자동 비활성.
-> 기존 동작(Google 결과 그대로)으로 완전 폴백된다. 즉 **행안부 적용은 완전 옵트인(opt-in)**이다.
+**클라이언트 메서드**
+
+- `JusoClient.resolve_candidates(keyword, count=10)` → 후보 리스트(교차검증용, 신규)
+- `JusoClient.resolve(keyword)` → `resolve_candidates(..., count=1)[0]` 래퍼(하위호환)
+
+> **승인키 미설정 시**: `make_juso_client(None)` → 클라이언트 `None` → KR 후처리 자동 비활성.
+> 기존 동작(Google STD 주소 그대로)으로 완전 폴백된다. 즉 **행안부 적용은 완전 옵트인(opt-in)**이다.
 
 ---
 
-## 4. 파이프라인 삽입 위치 — Case 라우팅 직전
+## 4. 파이프라인 삽입 위치 — 실재검증 결과 확정 직후
 
-행안부 선처리는 `process_row` 안에서 **Case A/B/C 라우팅(`pick_case`) 직전**에 삽입된다.
-기존 서브루틴/케이스 로직은 **일절 변경하지 않으며**, 오직 **Geocoding에 들어갈 주소 문자열만 교체**한다.
+행안부 통일은 `process_row` 안에서 **Case A/B/C 실재검증이 끝나 `result`(VerifyResult)가
+확정된 직후**에 수행된다. 기존 서브루틴/케이스 로직은 **일절 변경하지 않으며**, 확정된
+`result.std_address`만 한글 도로명으로 교체한다.
 
 ```
 process_row(row):
-  ┌─────────────────────────────────────────────────────────────┐
-  │ [신규] 행안부 선처리 (KR·한글일 때만)                          │
-  │                                                               │
-  │   if juso_client AND _is_kr(국가/지역):                        │
-  │       keyword = [주소(Eng), 주소(Local)] 중 한글인 첫 값        │
-  │       if keyword:                                             │
-  │           hit = J(keyword)                                    │
-  │           if hit.road_addr:                                  │
-  │               도로명주소 = hit.road_addr   ← 컬럼 저장(원본)   │
-  │               지번주소   = hit.jibun_addr  ← 컬럼 저장(원본)   │
-  │               # Geocoding 입력을 도로명으로 단일 치환           │
-  │               addr_en   = _strip_road_paren(hit.road_addr)   │
-  │               addr_local = ""                                │
-  └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-   case = pick_case(addr_en, addr_local, 위도, 경도)   ← 치환된 주소로 라우팅
+   case = pick_case(주소, 좌표)           ← (선처리 제거됨: 원본 주소로 바로 라우팅)
                               │
                               ▼
    ┌──────────── 기존 파이프라인 (변경 없음) ────────────┐
-   │  Case A: verify_case_A(...)                          │
-   │  Case B: verify_case_B(...)                          │
-   │  Case C: verify_case_C(...)                          │
-   │    → 내부에서 G/TS/TSA/CMP/RG/SIM 수행               │
+   │  Case A/B/C → G/TS/TSA/CMP/RG/SIM 수행              │
+   │  → result (status/code/std_address/place_id/좌표)   │
    └─────────────────────────────────────────────────────┘
+                              │
+                              ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │ [신규] 행안부 후처리 (KR AND result.std_address 있을 때만)     │
+  │                                                               │
+  │   if juso_client AND _is_kr(국가/지역) AND result.std_address: │
+  │       ko = adapter.address_ko(place_id=result.place_id,       │
+  │                               coord=(std_lat, std_lon))        │
+  │       sido, sgg, keyword = _split_ko_address(ko)              │
+  │       cands = J(keyword)                 ← 후보 다건           │
+  │       pick  = _pick_by_region(cands, sido, sgg)  ← 교차검증     │
+  │       if pick.road_addr:                                      │
+  │           result.std_address = _strip_road_paren(road_addr)   │
+  │           도로명주소 = pick.road_addr     ← 컬럼 저장(원본)    │
+  │           지번주소   = pick.jibun_addr    ← 컬럼 저장(원본)    │
+  └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 4-1. KR 판정 — `_is_kr`
@@ -115,62 +127,101 @@ process_row(row):
 _KR_ALIASES = {KR, KOR, 한국, 대한민국, SOUTH KOREA, KOREA, REPUBLIC OF KOREA}
 ```
 
-> 실무 데이터에서 `국가/지역`이 `KR:` 접두사 없이 `"한국"`으로만 적힌 케이스가 있어,
-> 코드/국가명 양쪽을 모두 별칭 집합과 대조하도록 했다.
+### 4-2. 깨끗한 한글 주소 확보 — `adapter.address_ko`
 
-### 4-2. 한글 주소 선별 — `_has_hangul`
+확정된 `place_id`(우선, 없으면 `(표준 위도, 표준 경도)` 좌표)로 **`language=ko` Geocoding
+재조회**해 순수 한글 주소를 얻는다. 혼재/영문 STD 주소를 그대로 행안부에 넘기면 매칭이
+깨지므로(실측), 반드시 ko 재조회 결과를 쓴다.
 
-주소 후보(`주소(Eng)`, `주소(Local)`)를 순서대로 검사해 **한글 음절(가~힣)이 하나라도
-포함된 첫 값**을 keyword로 채택한다. 입력 데이터가 한글 주소를 Eng/Local 어느 컬럼에
-넣을지 일정치 않아 **둘 다 후보**로 본다. 한글 주소가 없으면 대상에서 제외한다.
+| STD 주소(기본, 혼재) | `address_ko` 재조회(한글) |
+|---|---|
+| `South Korea, Incheon, Seo-gu, 가좌3동 548-1` | `대한민국 인천광역시 서구 가좌동 548-1` |
 
-### 4-3. 괄호 참고항목 제거 — `_strip_road_paren`
+> `RealMapsAdapter`만 실제 ko Geocoding을 수행하며, Mock/기타 어댑터는 `None`을 반환해
+> 후처리가 자동 스킵된다(mock 회귀 영향 없음).
+
+### 4-3. 행안부 검색어 추출 — `_split_ko_address`
+
+행안부 검색 API는 **(a) 시도·시군구를 앞에 붙이거나 (b) 번지 뒤 건물명·층·호·국가코드
+꼬리가 붙으면 매칭이 깨진다**(실측). 따라서 ko 주소를 세 부분으로 분해한다:
+
+```
+'대한민국 인천광역시 서구 가좌동 548-1'
+   → sido='인천광역시', sgg=['서구'], keyword='가좌동 548-1'
+
+'대한민국 경기도 화성시 석우동 삼성1로5길 6 원희캐슬동탄 10층 KR'
+   → sido='경기도', sgg=['화성시'], keyword='석우동 삼성1로5길 6'   (꼬리 제거)
+```
+
+- 선두 **국가명 접두(`대한민국`/`한국`) 제거** — 안 떼면 행안부 매칭 실패(실측).
+- **시도**(첫 토큰), **시군구**(동/도로명 전까지의 `…시/군/구` 토큰) 수집 → 교차검증용.
+- **검색어**: 동/도로명 시작 토큰(`…동|읍|면|리|가|로|길`)부터 **번지/건물번호
+  (`숫자[-숫자][번지]`) 하나까지**만. 그 뒤 상세(건물명·층·호·국가코드)는 버린다.
+
+| keyword(검색어) | 행안부 매칭 |
+|---|---|
+| `석우동 삼성1로5길 6 원희캐슬동탄 10층 KR` (꼬리 포함) | ❌ 0건 |
+| `석우동 삼성1로5길 6` (꼬리 제거) | ✅ |
+| `인천광역시 서구 가좌동 548-1` (시도·시군구 포함) | ❌ |
+| `가좌동 548-1` (동+지번만) | ✅ |
+
+### 4-4. 동명이동 교차검증 — `_pick_by_region`
+
+동+지번만으로 검색하면 **같은 이름의 동이 여러 시군구에 존재**해 오매칭 위험이 있다.
+후보를 다건 조회한 뒤 **ko 주소의 시도·시군구로 교차검증**해 올바른 후보를 고른다.
+
+- **시도 일치 필수**: `siNm`이 ko 시도와 같은 후보만 남긴다. 없으면 변환 실패(STD 주소 유지).
+- **시군구 일치 선호**: 남은 후보 중 시군구가 일치하면 우선 채택, 없으면 시도만 맞는 첫 후보.
+  - 행안부 `sggNm`은 `수원시 영통구`처럼 합쳐진 형태 → **부분 포함(⊇)** 으로 비교.
+  - **시군구는 "필수"가 아님**: ko 주소와 행안부의 시군구 **명칭이 다를 수 있다**
+    (예: 인천 **서구 → 서해구** 명칭 변경). 시도만 필수로 보아 이런 케이스를 수용한다.
+
+### 4-5. 괄호 참고항목 제거 — `_strip_road_paren`
 
 행안부 `roadAddr`는 끝에 **괄호 참고항목**(법정동·건물명)을 붙여 반환한다.
 예: `서울특별시 강동구 천호대로167길 26 (천호동, 하이브2)`
 
-이 괄호를 Geocoding에 그대로 넣으면 파싱이 흐려져 **엉뚱한 지번으로 오인식**된다
-(실측: 괄호 포함 시 `천호제3동 164-70`으로 떨어짐). 따라서 **Geocoding 입력에서는 괄호를
-제거**하고, **컬럼 저장에는 행안부 원본(괄호 포함)을 그대로** 남긴다.
+`STD 주소`에는 **순수 도로명만** 남기고(괄호 제거), **`도로명주소` 컬럼에는 행안부
+원본(괄호 포함)을 그대로** 보존한다.
 
 | 용도 | 값 |
 |---|---|
-| Geocoding 입력 | `서울특별시 강동구 천호대로167길 26` (괄호 제거) |
+| `STD 주소` | `서울특별시 강동구 천호대로167길 26` (괄호 제거) |
 | `도로명주소` 컬럼 | `서울특별시 강동구 천호대로167길 26 (천호동, 하이브2)` (원본 보존) |
 
 ---
 
 ## 5. 결과 변화 — Before / After
 
-동일한 KR 지번 입력에 대한 표준화 결과 비교(실호출 검증):
+실호출 검증 결과:
 
-### Before (행안부 미적용)
+### Before (행안부 미적용 — 혼재/지번 STD)
 
-| 입력 | STD 주소 |
+| 레코드 | STD 주소 |
 |---|---|
-| `천호동 164-70` (지번) | `164-70 Cheonho-dong, Gangdong-gu, Seoul, South Korea` — **지번 유지** ❌ |
+| LT Metal | `South Korea, Incheon, Seo-gu, 가좌3동 548-1` ❌ |
+| AUTO SENSOR KOREA | `South Korea, …Yeongtong-gu, 원천동 471` ❌ |
 
-### After (행안부 선처리 적용)
+### After (행안부 후처리 적용 — 한글 도로명 통일)
 
-| 입력 | STD 주소 | 도로명주소 | 지번주소 |
+| 레코드 | STD 주소 | 도로명주소 | 비고 |
 |---|---|---|---|
-| `천호동 164-70` (지번) | `26 Cheonho-daero 167-gil, Gangdong-gu, Seoul` ✅ | `서울특별시 강동구 천호대로167길 26 (천호동, 하이브2)` | `서울특별시 강동구 천호동 164-70 하이브2` |
-| `천호대로 167길 26` (도로명) | `26 Cheonho-daero 167-gil, Gangdong-gu, Seoul` ✅ | (동일) | (동일) |
+| LT Metal | `인천광역시 서해구 가재울로 14` ✅ | `…가재울로 14 (가좌동)` | 서구→**서해구** 명칭변경 반영 |
+| AUTO SENSOR KOREA | `경기도 수원시 영통구 중부대로448번길 97` ✅ | `…97 (원천동)` | |
+| HANA TECH | `서울특별시 서초구 언남16길 12` ✅ | `…12 (양재동)` | 지번→도로명 |
+| 제일써보테크 | `경기도 부천시 원미구 도약로308번길 33` ✅ | | |
 
-**핵심 효과: 지번/도로명 어느 체계로 입력되든 동일한 영문 도로명 STD로 수렴한다.**
+**핵심 효과: 지번/혼재 어느 형태로 나오든 최종 STD 주소가 한글 도로명으로 수렴한다.**
 
 ### 신규 산출물 컬럼
-
-기존 산출물 컬럼(5·6장, 사유코드/비고/표준주소/addressComponents/place_id 등)은 그대로
-유지하며, 아래 2개 컬럼을 추가한다.
 
 | 컬럼 | 내용 |
 |---|---|
 | **도로명주소** | 행안부가 반환한 한글 도로명주소 원본(괄호 참고항목 포함). 변환 성공 시에만 채움 |
 | **지번주소** | 행안부가 반환한 한글 지번주소. 변환 성공 시에만 채움 |
 
-> `STD 주소`는 기존과 동일하게 Geocoding/TextSearch 결과에서 확정된다.
-> 행안부는 **그 입력을 도로명으로 바꿔 넣을 뿐**이며, 사유코드·실재검증·좌표 로직에는 관여하지 않는다.
+> `STD 주소`는 실재검증(G/TS/TSA)에서 확정된 뒤 **행안부 후처리가 한글 도로명으로 교체**한다.
+> 사유코드·실재검증·좌표 로직에는 관여하지 않는다(변환 실패 시 Google STD 주소 그대로 유지).
 
 ---
 
@@ -178,35 +229,41 @@ _KR_ALIASES = {KR, KOR, 한국, 대한민국, SOUTH KOREA, KOREA, REPUBLIC OF KO
 
 | 구성요소 | 파일 | 역할 |
 |---|---|---|
-| 행안부 클라이언트 (`J` 서브루틴) | `scripts/STD_VLD_260929_juso_adapter.py` (신규) | `JusoClient.resolve()`, `make_juso_client()` |
-| 선처리 훅 + 헬퍼 | `scripts/STD_VLD_260917_run_verification.py` | `process_row` 내 선처리 블록, `_is_kr`/`_has_hangul`/`_strip_road_paren`/`_juso_road_addr`, `BASE_COLUMNS`에 컬럼 2개 추가 |
+| 행안부 클라이언트 (`J` 서브루틴) | `scripts/STD_VLD_260929_juso_adapter.py` | `JusoClient.resolve_candidates()`(다건+시도/시군구), `resolve()`(래퍼), `make_juso_client()` |
+| ko 재조회 (`address_ko`) | `scripts/STD_VLD_260917_maps_adapter.py` | `MapsAdapter.address_ko()`(기본 None), `RealMapsAdapter.address_ko()`(language=ko Geocoding) |
+| 후처리 훅 + 헬퍼 | `scripts/STD_VLD_260917_run_verification.py` | `process_row` 내 후처리 블록, `_unify_kr_road`/`_split_ko_address`/`_pick_by_region`/`_strip_country_prefix`/`_strip_road_paren`/`_is_kr`, `BASE_COLUMNS`에 컬럼 2개 |
 | 웹 경로 주입 | `app/backend/services/verify_service.py` | `_get_juso_client()`(지연 생성+캐시), `process_row(row, adapter, juso)` |
 | 승인키 설정 | `.env`, `render.yaml`(`JUSO_CONFM_KEY`, `sync: false`) | 미설정 시 자동 비활성 |
 
 > 코어 로직(G/TS/TSA/CMP/RG/SIM 및 Case A/B/C)은 **수정하지 않았다.** 행안부는
-> 코어와 분리된 얇은 선처리 레이어로, Geocoding 입력 문자열만 교체한다.
+> 코어와 분리된 얇은 후처리 레이어로, 확정된 `result.std_address`만 교체한다.
+> (`address_ko`는 어댑터 인터페이스에 추가된 조회 메서드로, 기존 서브루틴 동작은 불변.)
 
 ---
 
 ## 7. 검증 결과
 
-1. **실호출(KR 지번→도로명):** `천호동 164-70`, `천호대로 167길 26` 모두
-   `26 Cheonho-daero 167-gil, Gangdong-gu, Seoul`로 수렴 ✅
-2. **괄호 버그 수정:** `_strip_road_paren` 적용 후 오인식(`천호제3동 164-70`) 해소 ✅
-3. **회귀(폴백):**
-   - `juso_client=None` → 도로명/지번 컬럼 공란, 기존 출력과 동일 ✅
-   - 비KR 레코드 → 행안부 미호출(스킵) ✅
-   - KR이지만 한글 주소 없음 → 행안부 미호출(스킵) ✅
+1. **실호출(혼재/지번→한글 도로명):** LT Metal/AUTO SENSOR/HANA TECH/제일써보테크 모두
+   한글 도로명으로 수렴 ✅
+2. **동명이동 교차검증:** 시도 일치 필수로 타 지역 오매칭 차단, 시군구 명칭변경
+   (서구→서해구) 케이스 수용 ✅
+3. **꼬리 제거:** 건물명·층·호·국가코드가 붙은 ko 주소에서 "동/도로명~번지"만 추출해 매칭 ✅
+4. **회귀(폴백):**
+   - `juso_client=None`(승인키 미설정) → 도로명/지번 공란, 기존 Google STD 주소와 동일 ✅
+   - 비KR 레코드(중국/싱가포르 등) → 행안부 미호출, 원본 유지 ✅
+   - Mock 어댑터(`address_ko=None`) → 후처리 자동 스킵, mock 회귀 동일 ✅
+   - 시도 일치 후보 없음/행안부 오류 → STD 주소 그대로 유지 ✅
 
 ---
 
 ## 8. 주의사항
 
 - **내부망 차단 가능성:** 행안부 API는 일부 내부망에서 차단될 수 있다. 배포 환경(Render 등)에서
-  접근 가능 여부를 확인해야 한다. 차단/오류 시 `resolve()`가 `None`을 반환해 기존 Google
-  경로로 자동 폴백된다.
+  접근 가능 여부를 확인해야 한다. 차단/오류 시 후보 조회가 빈 리스트를 반환해 기존 Google
+  STD 주소로 자동 폴백된다.
 - **승인키 배포:** `JUSO_CONFM_KEY`는 `.env`(로컬)와 Render 대시보드(배포) **양쪽에** 입력해야
   배포 환경에서 도로명 변환이 활성화된다. (`render.yaml`은 `sync: false`로 키 이름만 선언)
-- **영문 도로명(`eng_addr`)도 행안부가 제공:** 향후 Google 호출 없이 행안부 `eng_addr`만으로
-  영문 도로명 STD를 구성할 여지가 있으나, 현재는 좌표·실재검증 때문에 Geocoding이 필요하므로
-  현 구조(행안부 선 → Geocoding 후)를 유지한다.
+- **KR 레코드당 Google 호출 1회 추가:** 후처리의 `address_ko`(language=ko Geocoding)가
+  KR·STD 주소 보유 레코드마다 1회 발생한다(실재검증 호출과 별개).
+- **적용 범위:** `process_row` 한 곳 수정으로 **Standardization 메뉴**와 **Similarity Search의
+  "확인할 데이터" 표준화** 양쪽에 반영된다(둘 다 `/api/standardize` 경로를 공유).

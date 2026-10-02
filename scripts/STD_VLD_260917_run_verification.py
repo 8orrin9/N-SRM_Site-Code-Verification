@@ -90,6 +90,12 @@ def _strip_road_paren(road_addr: str) -> str:
 # language=ko 주소 앞의 국가명 접두. 붙어 있으면 행안부 검색이 깨지므로 제거한다
 # (실측: '대한민국 경기도…'는 매칭 실패, '경기도…'는 도로명 변환 성공).
 _COUNTRY_PREFIX_RE = re.compile(r"^(대한민국|한국)\s+")
+# 지번부 시작 토큰(동/읍/면/리/가/로/길). 여기부터 검색어로 추출한다.
+_ADDR_START_RE = re.compile(r".*(동|읍|면|리|가|로|길)$")
+# 도로명 토큰(로/길). 번지 전까지 이어붙인다.
+_ROAD_RE = re.compile(r".*(로|길)$")
+# 번지/건물번호 토큰(숫자[-숫자][번지]).
+_NUM_RE = re.compile(r"\d+(-\d+)?(번지)?$")
 
 
 def _strip_country_prefix(addr: str) -> str:
@@ -97,24 +103,82 @@ def _strip_country_prefix(addr: str) -> str:
     return _COUNTRY_PREFIX_RE.sub("", (addr or "").strip())
 
 
+def _split_ko_address(ko_addr: str):
+    """ko 재조회 주소를 (시도, [시군구…], 행안부 검색어)로 분해.
+
+    예) '대한민국 인천광역시 서구 가좌동 548-1' → ('인천광역시', ['서구'], '가좌동 548-1').
+    행안부 검색 API는 (a) 시도·시군구를 앞에 붙이거나 (b) 번지 뒤 건물명·층·호·국가
+    코드 꼬리가 붙으면 매칭이 깨지므로(실측), 동/도로명~번지까지만 검색어로 추려내고
+    시도·시군구는 후보 교차검증에 쓴다.
+    """
+    s = _strip_country_prefix(ko_addr)
+    toks = s.split()
+    if not toks:
+        return "", [], ""
+    sido = toks[0]
+    sgg, i = [], 1
+    # 동/도로명이 나오기 전까지 시/군/구 토큰을 시군구로 수집
+    while i < len(toks) and not _ADDR_START_RE.match(toks[i]) \
+            and (toks[i].endswith("시") or toks[i].endswith("군") or toks[i].endswith("구")):
+        sgg.append(toks[i])
+        i += 1
+    # 동/도로명 시작 토큰부터, 번지(숫자) 하나까지만 검색어로 추출(꼬리 상세는 버림)
+    search, started = [], False
+    for t in toks[i:]:
+        if not started:
+            if _ADDR_START_RE.match(t):
+                started = True
+                search.append(t)
+            continue
+        if _NUM_RE.match(t):
+            search.append(t)
+            break
+        if _ROAD_RE.match(t):
+            search.append(t)
+            continue
+        break
+    return sido, sgg, " ".join(search)
+
+
+def _pick_by_region(candidates, sido, sgg):
+    """후보 중 시도 일치(필수) + 시군구 일치(선호) 하나를 고른다.
+
+    시군구 명칭이 ko 주소와 행안부에서 다를 수 있어(예: 서구→서해구) 시도만 필수로
+    보고, 시군구까지 일치하는 후보가 있으면 우선 채택한다. 시도 일치가 없으면 None.
+    """
+    same_sido = [c for c in candidates if c.get("si_nm") == sido]
+    if not same_sido:
+        return None
+    sgg_key = " ".join(sgg)
+    for c in same_sido:
+        # 행안부 sgg_nm은 '수원시 영통구'처럼 합쳐진 형태 → 부분 포함으로 비교
+        if sgg_key and (sgg_key in c.get("sgg_nm", "") or c.get("sgg_nm", "") in sgg_key):
+            return c
+    return same_sido[0]
+
+
 def _unify_kr_road(result, adapter, juso_client):
     """KR 레코드의 최종 STD 주소를 한글 도로명으로 통일한다.
 
     실재검증 결과의 STD 주소는 Google 응답 그대로라 영어/혼재 표기(예:
     '…Yeongtong-gu, 원천동 471')이거나 지번일 수 있다. place_id(없으면 좌표)로
-    language=ko 재조회해 순수 한글 주소를 얻고, 행안부로 도로명 변환하여 STD 주소를
-    한글 도로명으로 교체한다. 변환 성공 시 (도로명주소, 지번주소)를, 실패/대상아님이면
-    ("", "")를 반환한다(STD 주소는 그대로 둠).
+    language=ko 재조회해 순수 한글 주소를 얻고, 동+지번만 행안부로 조회해 시도·시군구
+    교차검증으로 올바른 도로명을 채택한다(동명이동 오매칭 차단). 변환 성공 시 (도로명주소,
+    지번주소)를, 실패/대상아님이면 ("", "")를 반환한다(STD 주소는 그대로 둠).
     """
     coord = (result.std_lat, result.std_lon) if result.std_lat is not None else None
     ko_addr = adapter.address_ko(place_id=result.place_id, coord=coord)
     if not ko_addr:
         return "", ""
-    hit = juso_client.resolve(_strip_country_prefix(ko_addr))
-    if not (hit and hit.get("road_addr")):
+    sido, sgg, keyword = _split_ko_address(ko_addr)
+    if not keyword:
         return "", ""
-    result.std_address = _strip_road_paren(hit["road_addr"])
-    return hit["road_addr"], hit.get("jibun_addr", "")
+    cands = juso_client.resolve_candidates(keyword)
+    pick = _pick_by_region(cands, sido, sgg)
+    if not (pick and pick.get("road_addr")):
+        return "", ""
+    result.std_address = _strip_road_paren(pick["road_addr"])
+    return pick["road_addr"], pick.get("jibun_addr", "")
 
 
 def pick_case(row) -> str:

@@ -27,14 +27,23 @@ class JusoClient:
         반환: {road_addr, jibun_addr, zip_no, eng_addr}
         네트워크·파싱 예외는 None으로 흡수해 호출부가 기존 결과로 폴백하도록 한다.
         """
+        cands = self.resolve_candidates(keyword, count=1)
+        return cands[0] if cands else None
+
+    def resolve_candidates(self, keyword: str, count: int = 10) -> list:
+        """keyword로 도로명주소 후보 목록을 조회(최대 count건).
+
+        시/도·시군구 명칭이 다른 동명이동을 호출부가 교차검증으로 거를 수 있도록
+        후보마다 si_nm(시도)·sgg_nm(시군구)을 함께 담는다. 실패/오류 시 빈 리스트.
+        """
         keyword = (keyword or "").strip()
         if not keyword:
-            return None
+            return []
         params = {
             "confmKey": self.confm_key,
             "keyword": keyword,
             "currentPage": 1,
-            "countPerPage": 1,
+            "countPerPage": count,
             "resultType": "json",
         }
         try:
@@ -42,22 +51,22 @@ class JusoClient:
             resp.raise_for_status()
             data = resp.json()
         except (requests.RequestException, ValueError):
-            return None
+            return []
 
         results = data.get("results", {})
-        common = results.get("common", {})
-        if common.get("errorCode") != "0":
-            return None
-        juso = results.get("juso") or []
-        if not juso:
-            return None
-        top = juso[0]
-        return {
-            "road_addr": top.get("roadAddr", ""),
-            "jibun_addr": top.get("jibunAddr", ""),
-            "zip_no": top.get("zipNo", ""),
-            "eng_addr": top.get("engAddr", ""),
-        }
+        if results.get("common", {}).get("errorCode") != "0":
+            return []
+        out = []
+        for j in results.get("juso") or []:
+            out.append({
+                "road_addr": j.get("roadAddr", ""),
+                "jibun_addr": j.get("jibunAddr", ""),
+                "zip_no": j.get("zipNo", ""),
+                "eng_addr": j.get("engAddr", ""),
+                "si_nm": j.get("siNm", ""),
+                "sgg_nm": j.get("sggNm", ""),
+            })
+        return out
 
 
 def make_juso_client(confm_key: str):
