@@ -11,7 +11,8 @@ const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 // 사례가 확인되어(작은 데이터는 통과, 큰 데이터만 403) 전송 직전에 덜어낸다.
 // 저장(saveTable)에는 적용하지 않음 — 원본 전체를 보존해야 함.
 const COMPUTE_FIELDS = [
-  "업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역",
+  "업체", "STD 업체명", "STD 업체명(Eng)", "업체명 언어",
+  "기업식별 코드", "Duns No.", "국가/지역",
   "주소(Eng)", "STD 주소", "위도", "경도", "표준 위도", "표준 경도",
   "addressComponents", "표준화",
 ];

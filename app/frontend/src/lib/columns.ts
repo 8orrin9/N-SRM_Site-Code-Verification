@@ -6,6 +6,7 @@ export const BASE_COLUMNS = [
   "No.", "Status", "Site Code", "Site 유형", "업체", "항구/공항 코드",
   "기업식별 코드", "Duns No.", "국가/지역", "행정구역", "주소(Eng)", "주소(Local)",
   "위도", "경도", "관련 협력사 코드", "수정일", "Site 출처", "STD 주소", "STD 업체명",
+  "STD 업체명(Eng)", "업체명 언어",
 ];
 
 export const EXTRA_COLUMNS = [
@@ -22,7 +23,7 @@ export const INPUT_COLUMNS = [
 
 // 표준화 결과에서 강조(STD 셀)로 표시할 컬럼.
 export const STD_COLUMNS = [
-  "표준화", "STD 업체명", "STD 주소", "표준 위도", "표준 경도", "참조 URL",
+  "표준화", "STD 업체명", "STD 업체명(Eng)", "STD 주소", "표준 위도", "표준 경도", "참조 URL",
 ];
 
 // 업로드 매핑 타겟: process_row/후속 로직이 읽는 표준 입력 컬럼명.

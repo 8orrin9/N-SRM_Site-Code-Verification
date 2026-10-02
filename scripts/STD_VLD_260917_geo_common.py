@@ -196,6 +196,25 @@ def normalize_address_components(raw, source_api: str):
 
 
 # ---------------------------------------------------------------------------
+# 주소 상세 레벨 판정 (참조 URL 선택용)
+# ---------------------------------------------------------------------------
+# 동(sublocality) 이하 상세 레벨. 표준주소에 이 중 하나라도 있으면 "충분히 상세"로 본다.
+_DETAIL_ADDRESS_LEVELS = frozenset(["sublocality", "route", "street_number"])
+
+
+def has_detail_below_locality(components) -> bool:
+    """addressComponents에 동/도로/번지(sublocality 이하) 상세가 하나라도 있는지.
+
+    실재검증 실패로 표준주소가 도시/행정구역 레벨까지만 뭉개진 경우(False), 사용자
+    검토용 URL은 상세 주소를 담은 원본 주소로 검색하는 편이 더 유용하다(참조 URL 선택).
+    """
+    for comp in components or []:
+        if _DETAIL_ADDRESS_LEVELS & set(comp.get("types", [])):
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # 레코드별 판정 결과(설계 문서 6장 산출물)
 # ---------------------------------------------------------------------------
 @dataclass

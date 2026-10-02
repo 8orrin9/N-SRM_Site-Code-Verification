@@ -79,7 +79,14 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
         "addr": dd.address_gate(q_gate, ref_gate),
         "coord": dd.coord_gate(q_gate, ref_gate),
     }
-    name_verdict, name_raw = dd.name_gate(q_gate, ref_gate)
+    # 업체명 게이트: 쿼리·기준의 언어가 같으면(둘 다 존재) 원본 표준명끼리, 다르거나
+    # 결측이면 영문 표기끼리 비교한다(동일 언어 우선, 교차 시 영문 폴백).
+    q_lang, ref_lang = q_gate.get("lang"), ref_gate.get("lang")
+    if q_lang and ref_lang and q_lang == ref_lang:
+        name_a, name_b = q_gate.get("std_name"), ref_gate.get("std_name")
+    else:
+        name_a, name_b = q_gate.get("name_eng"), ref_gate.get("name_eng")
+    name_verdict, name_raw = dd.name_gate({"std_name": name_a}, {"std_name": name_b})
     name_sim = name_raw if name_raw is not None else None
 
     # A. 게이트 근거 G (SKIP 아닌 게이트만 분모에 포함)
@@ -141,10 +148,15 @@ def _prep(row: dict) -> dict:
     쿼리는 사용자 수기 입력이라 표준화 전이라 'STD 업체명'이 비고 '업체'만 있는 경우가
     대부분이다. _to_rows의 std_name은 'STD 업체명'만 읽으므로, 폴백을 담고 있는 label로
     채워 업체명 게이트(name_gate)가 SKIP되지 않게 한다.
+
+    언어별 비교(동일 언어 우선, 교차 시 영문 폴백)를 위해 'STD 업체명(Eng)'·'업체명 언어'도
+    담는다. 영문명이 비면 std_name으로 폴백한다.
     """
     g = dd._to_rows([row])[0]
     if not g.get("std_name"):
         g["std_name"] = g.get("label") or ""
+    g["name_eng"] = (row.get("STD 업체명(Eng)") or "").strip() or g["std_name"]
+    g["lang"] = (row.get("업체명 언어") or "").strip()
     return g
 
 

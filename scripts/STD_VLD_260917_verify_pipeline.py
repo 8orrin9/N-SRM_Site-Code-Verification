@@ -25,13 +25,22 @@ def _query_url(company: str, address: str) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={q}"
 
 
-def _query_url_dual(company: str, std_address: str, raw_address: str) -> str:
+def _query_url_dual(company: str, std_address: str, raw_address: str,
+                    std_components=None) -> str:
     """표준(지오코딩) 주소 검색 URL을 기본으로 제공하되, 원본 입력 주소가 달라
     별도 검색이 될 때 두 URL을 ' | '로 병존한다(표준 → 원본 순). 지오코딩이
     도시레벨·Plus Code로 뭉갠 경우 원본 주소가 실업체를 더 잘 찾아내는 것을 사람이
-    보조 확인하도록 하기 위함. 두 주소가 같으면 URL 하나만 반환."""
+    보조 확인하도록 하기 위함. 두 주소가 같으면 URL 하나만 반환.
+
+    단, 표준주소가 동(sublocality) 이하 상세 없이 도시/행정구역 레벨까지만 뭉개졌고
+    원본 주소가 따로 있으면, 쓸모가 낮은 표준주소 URL은 빼고 원본 주소 URL만 단독
+    제공한다(원본은 addressComponents가 없어 레벨 비교가 불가하므로 표준주소 레벨의
+    절대 임계로 대체 판정)."""
+    raw = (raw_address or "").strip()
+    if raw and not gc.has_detail_below_locality(std_components):
+        return _query_url(company, raw)
     primary = _query_url(company, std_address or "")
-    if not (raw_address or "").strip():
+    if not raw:
         return primary
     secondary = _query_url(company, raw_address)
     return primary if secondary == primary else f"{primary} | {secondary}"
@@ -134,7 +143,8 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None, lang=No
             note="지오코딩은 성공했으나 TextSearch(좌표·주소텍스트)에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url_dual(disp, g["address_std"], addr_text),
+            reference_url=_query_url_dual(disp, g["address_std"], addr_text,
+                                          g["address_components_g"]),
             address_components=g["address_components_g"],
             method_trace=["G", "TS", "TSA"])
 
@@ -215,7 +225,8 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -
             note="표준·기존 좌표는 정합하나 TextSearch에서 업체 미발견",
             std_address=g["address_std"],
             std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-            reference_url=_query_url_dual(disp, g["address_std"], addr_text),
+            reference_url=_query_url_dual(disp, g["address_std"], addr_text,
+                                          g["address_components_g"]),
             address_components=g["address_components_g"],
             method_trace=["G", "TS"])
 
@@ -289,7 +300,8 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -
         note="표준·기존 좌표 모두 TextSearch에서 업체 미발견",
         std_address=g["address_std"],
         std_lat=g["coord_std"][0], std_lon=g["coord_std"][1],
-        reference_url=_query_url_dual(disp, g["address_std"], addr_text),
+        reference_url=_query_url_dual(disp, g["address_std"], addr_text,
+                                      g["address_components_g"]),
         address_components=g["address_components_g"],
         method_trace=["G", "TS_old", "TS_std"])
 

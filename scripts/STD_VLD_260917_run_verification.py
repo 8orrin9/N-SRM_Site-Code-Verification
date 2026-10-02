@@ -26,6 +26,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 import STD_VLD_260917_geo_common as gc  # noqa: E402
 import STD_VLD_260917_verify_pipeline as vp  # noqa: E402
+from SIM_261002_translate import detect_and_translate  # noqa: E402
 from STD_VLD_260917_locale import lang_for_country  # noqa: E402
 from STD_VLD_260917_maps_adapter import make_adapter  # noqa: E402
 from STD_VLD_260917_std_company import standardize_company  # noqa: E402
@@ -39,7 +40,7 @@ BASE_COLUMNS = [
     "No.", "Status", "Site Code", "Site 유형", "업체", "항구/공항 코드",
     "기업식별 코드", "Duns No.", "국가/지역", "행정구역", "주소(Eng)", "주소(Local)",
     "위도", "경도", "관련 협력사 코드", "수정일", "Site 출처", "STD 주소", "STD 업체명",
-    "도로명주소", "지번주소",
+    "STD 업체명(Eng)", "업체명 언어", "도로명주소", "지번주소",
 ]
 # 산출물 추가 컬럼(설계 문서 6장)
 EXTRA_COLUMNS = [
@@ -139,6 +140,8 @@ def process_row(row, adapter, juso_client=None) -> dict:
     """
     disp = (row.get("업체") or "").strip()
     company_std = standardize_company(disp)
+    # 언어 판정 + 영문 표기(비영어 업체명 대상). 유사 검색의 언어별 비교에 사용.
+    translated = detect_and_translate(company_std)
     addr_en = (row.get("주소(Eng)") or "").strip()
     addr_local = (row.get("주소(Local)") or "").strip()
     coord = _parse_coord(row)
@@ -173,6 +176,8 @@ def process_row(row, adapter, juso_client=None) -> dict:
 
     out = dict(row)
     out["STD 업체명"] = company_std
+    out["STD 업체명(Eng)"] = translated["name_eng"]
+    out["업체명 언어"] = translated["lang"]
     out["STD 주소"] = result.std_address or ""
     out["표준화"] = result.status
     out["분류 코드"] = result.code
