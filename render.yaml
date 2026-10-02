@@ -12,3 +12,5 @@ services:
         sync: false
       - key: JUSO_CONFM_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false

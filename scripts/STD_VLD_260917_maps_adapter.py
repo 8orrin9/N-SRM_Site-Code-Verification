@@ -60,6 +60,15 @@ class MapsAdapter(abc.ABC):
     def RG(self, coord) -> dict:
         """Reverse Geocoding. 반환: {address_rg, address_components_rg}"""
 
+    def address_ko(self, place_id=None, coord=None):
+        """한국어(language=ko) 표기의 순수 한글 주소 1건을 반환(없으면 None).
+
+        place_id 우선, 없으면 좌표로 조회한다. 최종 STD 주소가 영어/혼재 표기로
+        나온 KR 레코드를 행안부로 도로명 통일하기 위한 '깨끗한 한글 주소' 확보용.
+        기본 구현은 None(ko 조회 미지원 어댑터). Real 어댑터만 오버라이드한다.
+        """
+        return None
+
 
 def make_adapter(mode: str, *, api_key: str = None) -> MapsAdapter:
     """mode: 'mock' | 'real'."""
@@ -334,6 +343,27 @@ class RealMapsAdapter(MapsAdapter):
         resp = self.session.get(self.GEOCODE_URL, params=p, timeout=15)
         resp.raise_for_status()
         return resp.json()
+
+    def address_ko(self, place_id=None, coord=None):
+        """language=ko Geocoding으로 순수 한글 주소를 조회(place_id 우선, 없으면 좌표).
+
+        TextSearch/Geocoding 기본 응답은 번역 가능한 레벨만 영어로, 세부 동은 한글로
+        조립돼 혼재 주소가 되는데(예: '...Yeongtong-gu, 원천동 471'), language=ko로
+        재조회하면 전부 한글인 주소를 얻는다('대한민국 경기도 수원시 영통구 원천동 471').
+        네트워크·파싱 예외는 None으로 흡수(호출부가 기존 STD 주소로 폴백).
+        """
+        if place_id:
+            params = {"place_id": place_id, "language": "ko"}
+        elif coord:
+            params = {"latlng": f"{coord[0]},{coord[1]}", "language": "ko"}
+        else:
+            return None
+        try:
+            data = self._geocode(params)
+            results = data.get("results", [])
+            return results[0].get("formatted_address") if results else None
+        except Exception:
+            return None
 
     def G(self, query: str) -> dict:
         data = self._geocode({"address": query})
