@@ -54,6 +54,12 @@ def standardize_company(name: str) -> str:
 
     예) '경인화학주식회사' → '경인화학', 'Summit ElectronicsLtd.' → 'Summit Electronics'
         '日本精密' → '日本精密'(변화 없음)
+
+    Args:
+        name (str): 원본 업체명.
+
+    Returns:
+        str: 법인형태를 제거한 저장용 표준 업체명. name이 None이면 "".
     """
     if name is None:
         return ""
@@ -71,6 +77,12 @@ def comparison_key(name: str) -> str:
     """SIM 비교 전용 정규화 키(미저장). NFKC + 소문자 + 법인형태 제거 +
     특수문자/공백 정규화. 업종 일반명사는 보존한다.
     예) 'Summit Electronics' → 'summitelectronics'
+
+    Args:
+        name (str): 원본 업체명.
+
+    Returns:
+        str: 유사도 비교용 정규화 키. name이 None이면 "".
     """
     if name is None:
         return ""
@@ -86,7 +98,14 @@ def SIM(name_std: str, candidate_std: str):
     """설계 문서 1-1장. 세 지표의 최댓값(0~1)과 임계치 판정을 반환.
 
     입력은 표준화 업체명(원표기)이며, 내부에서 comparison_key로 비교 정규화한다.
-    반환: (score: float 0~1, is_match: bool)
+
+    Args:
+        name_std (str): 표준화된 업체명(원표기).
+        candidate_std (str): 비교 대상 표준화 업체명.
+
+    Returns:
+        tuple: (score, is_match). score는 0~1 유사도,
+            is_match는 score가 SIM_THRESHOLD 이상인지 여부(bool).
     """
     a = comparison_key(name_std)
     b = comparison_key(candidate_std)

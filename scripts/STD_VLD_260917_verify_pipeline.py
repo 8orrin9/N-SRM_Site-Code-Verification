@@ -16,10 +16,27 @@ CMP_TOLERANCE_M = gc.CMP_TOLERANCE_M
 # 참조 URL 생성 (설계 문서 6장)
 # ---------------------------------------------------------------------------
 def _place_url(place_id: str) -> str:
+    """place_id로 Google Maps 참조 URL을 생성한다.
+
+    Args:
+        place_id (str): Google place_id.
+
+    Returns:
+        str: place_id 기반 Google Maps URL.
+    """
     return f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
 
 def _query_url(company: str, address: str) -> str:
+    """업체명+주소 검색어로 Google Maps 검색 URL을 생성한다.
+
+    Args:
+        company (str): 업체명.
+        address (str): 주소 문자열.
+
+    Returns:
+        str: 검색 질의가 인코딩된 Google Maps URL.
+    """
     import urllib.parse
     q = urllib.parse.quote(f"{company} {address}".strip())
     return f"https://www.google.com/maps/search/?api=1&query={q}"
@@ -35,7 +52,17 @@ def _query_url_dual(company: str, std_address: str, raw_address: str,
     단, 표준주소가 동(sublocality) 이하 상세 없이 도시/행정구역 레벨까지만 뭉개졌고
     원본 주소가 따로 있으면, 쓸모가 낮은 표준주소 URL은 빼고 원본 주소 URL만 단독
     제공한다(원본은 addressComponents가 없어 레벨 비교가 불가하므로 표준주소 레벨의
-    절대 임계로 대체 판정)."""
+    절대 임계로 대체 판정).
+
+    Args:
+        company (str): 업체명.
+        std_address (str): 표준(지오코딩) 주소.
+        raw_address (str): 원본 입력 주소.
+        std_components (list, optional): 표준주소의 addressComponents.
+
+    Returns:
+        str: 단일 또는 ' | '로 병존된 Google Maps 검색 URL.
+    """
     raw = (raw_address or "").strip()
     if raw and not gc.has_detail_below_locality(std_components):
         return _query_url(company, raw)
@@ -47,6 +74,16 @@ def _query_url_dual(company: str, std_address: str, raw_address: str,
 
 
 def _verified_reason(relaxed: bool, direct_code: str, relaxed_code: str) -> str:
+    """반경 완화 여부에 따라 적절한 검증 분류 코드를 고른다.
+
+    Args:
+        relaxed (bool): 반경 완화 매칭이었는지 여부.
+        direct_code (str): 직접 매칭 시 코드.
+        relaxed_code (str): 완화 매칭 시 코드.
+
+    Returns:
+        str: relaxed면 relaxed_code, 아니면 direct_code.
+    """
     return relaxed_code if relaxed else direct_code
 
 
@@ -62,6 +99,12 @@ def _is_approximate(g) -> bool:
     실측: Google Geocoding은 도로/번지를 못 찾으면 도시 중심을 APPROXIMATE로 반환한다
     (예: Kematek '1 San Qian Road'→'Suzhou' 도시중심). 이 경우 진짜 업체가 도시 중심에서
     수 km 떨어져 있는 것이 정상이므로 거리 게이트·CMP에서 좌표를 신뢰하면 정탐을 놓친다.
+
+    Args:
+        g (dict | None): G(지오코딩) 결과. location_type 키를 참조한다.
+
+    Returns:
+        bool: location_type이 "APPROXIMATE"면 True.
     """
     return (g or {}).get("location_type") == "APPROXIMATE"
 
@@ -72,6 +115,15 @@ def _within_gate(g_coord, ts_coord, radius_m=TS_MATCH_GATE_M, *, approximate=Fal
     - 좌표가 없으면 판단 불가로 통과.
     - G가 APPROXIMATE(도시레벨)이면 좌표 앵커가 부정확하므로 거리 게이트를 적용하지
       않는다(먼 매칭이 오히려 정상). G가 정밀할 때만 원거리 오매칭을 차단한다.
+
+    Args:
+        g_coord (tuple | None): G 표준좌표 (lat, lon).
+        ts_coord (tuple | None): TS 매칭 place 좌표 (lat, lon).
+        radius_m (float, optional): 허용 반경(m). 기본 TS_MATCH_GATE_M.
+        approximate (bool, optional): G가 도시레벨(APPROXIMATE)인지. 기본 False.
+
+    Returns:
+        bool: 반경 내이거나 판단 불가·APPROXIMATE면 True.
     """
     if approximate:
         return True
@@ -86,6 +138,15 @@ def _pick_std_address(ts_addr, ts_comps, g_addr, g_comps):
 
     실제 POI가 등재된 경우 TS가 상세하나(예: 도로+번지), 업체 미등재로 상위
     행정구역이 잡히면 G(주소 파싱)가 더 상세할 수 있다.
+
+    Args:
+        ts_addr (str | None): TS 매칭 place 주소.
+        ts_comps (list | None): TS addressComponents.
+        g_addr (str | None): G 지오코딩 주소.
+        g_comps (list | None): G addressComponents.
+
+    Returns:
+        str | None: 채택된 표준 주소.
     """
     if not ts_addr:
         return g_addr
@@ -100,6 +161,18 @@ def _pick_std_address(ts_addr, ts_comps, g_addr, g_comps):
 # Case A — 주소 + 업체명
 # ---------------------------------------------------------------------------
 def verify_case_A(company_std, addr_text, adapter, *, company_disp=None, lang=None) -> gc.VerifyResult:
+    """Case A(주소+업체명) 검증. G → TS → TSA 순으로 재검증한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        addr_text (str): 주소 문자열.
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        company_disp (str, optional): 표시용 업체명. 없으면 company_std.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     disp = company_disp or company_std
     g = adapter.G(addr_text)  # 주소만 지오코딩(업체명 결합은 파싱을 흐려 도시레벨로 떨어뜨림)
 
@@ -169,6 +242,18 @@ def verify_case_A(company_std, addr_text, adapter, *, company_disp=None, lang=No
 # Case B — 좌표 + 업체명
 # ---------------------------------------------------------------------------
 def verify_case_B(company_std, coord, adapter, *, company_disp=None, lang=None) -> gc.VerifyResult:
+    """Case B(좌표+업체명) 검증. TS → RG 순으로 재검증한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        coord (tuple): 기존 좌표 (lat, lon).
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        company_disp (str, optional): 표시용 업체명. 없으면 company_std.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     disp = company_disp or company_std
     ts = adapter.TS(company_std, coord, lang=lang)
     if ts["found"]:
@@ -197,7 +282,22 @@ def verify_case_B(company_std, coord, adapter, *, company_disp=None, lang=None) 
 # Case C — 주소 + 좌표 + 업체명  (G 결과를 받아 2단계 이하를 수행하는 내부 함수)
 # ---------------------------------------------------------------------------
 def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -> gc.VerifyResult:
-    """G.found = True 이후의 Case C 서브트리(문서 4장 2번)."""
+    """G.found = True 이후의 Case C 서브트리(문서 4장 2번).
+
+    표준좌표(G)와 기존좌표(coord)의 정합 여부에 따라 TS/CMP로 분기한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        disp (str): 표시용 업체명.
+        addr_text (str): 주소 문자열.
+        coord (tuple): 기존 좌표 (lat, lon).
+        g (dict): G(지오코딩) 결과.
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     dist = gc.haversine(g["coord_std"], coord)
     approx = _is_approximate(g)
 
@@ -307,7 +407,21 @@ def _case_C_with_G(company_std, disp, addr_text, coord, g, adapter, lang=None) -
 
 
 def _case_C_g_failed(company_std, disp, addr_text, coord, adapter, lang=None) -> gc.VerifyResult:
-    """G.found = False 이후의 Case C 서브트리(문서 4장 3번)."""
+    """G.found = False 이후의 Case C 서브트리(문서 4장 3번).
+
+    지오코딩 실패 시 기존좌표 TS → 주소텍스트 TSA → RG 순으로 폴백한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        disp (str): 표시용 업체명.
+        addr_text (str): 주소 문자열.
+        coord (tuple): 기존 좌표 (lat, lon).
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     ts_old = adapter.TS(company_std, coord, lang=lang)
     if ts_old["found"]:
         code = _verified_reason(ts_old["relaxed"], gc.VERIFIED_COORD_DIRECT,
@@ -341,6 +455,23 @@ def _case_C_g_failed(company_std, disp, addr_text, coord, adapter, lang=None) ->
 
 def verify_case_C(company_std, addr_en, addr_local, coord, adapter,
                   *, company_disp=None, lang=None) -> gc.VerifyResult:
+    """Case C(주소+좌표+업체명) 검증 진입점.
+
+    영문/현지어 주소가 모두 있으면 듀얼주소 전처리로 라우팅하고, 아니면 단일 주소를
+    G(지오코딩)한 뒤 성공/실패 서브트리로 분기한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        addr_en (str): 영문 주소(없으면 "").
+        addr_local (str): 현지어 주소(없으면 "").
+        coord (tuple): 기존 좌표 (lat, lon).
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        company_disp (str, optional): 표시용 업체명. 없으면 company_std.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     disp = company_disp or company_std
     dual = bool(addr_en) and bool(addr_local)
 
@@ -358,7 +489,23 @@ def verify_case_C(company_std, addr_en, addr_local, coord, adapter,
 # 듀얼주소 전처리 (설계 문서 1-2장) — Case A/C 1단계(G) 대체
 # ---------------------------------------------------------------------------
 def _run_dual_address_C(company_std, disp, addr_en, addr_local, coord, adapter, *, lang=None) -> gc.VerifyResult:
-    """Case C에서 영문/현지어 주소가 모두 존재할 때의 라우팅."""
+    """Case C에서 영문/현지어 주소가 모두 존재할 때의 라우팅.
+
+    두 주소를 각각 G한 뒤 CMP 결과에 따라 합의 채택하거나, MISMATCH면 각각 완주
+    검증 후 통합 매트릭스로 종합한다.
+
+    Args:
+        company_std (str): 표준화된 업체명.
+        disp (str): 표시용 업체명.
+        addr_en (str): 영문 주소.
+        addr_local (str): 현지어 주소.
+        coord (tuple): 기존 좌표 (lat, lon).
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        lang (str, optional): 현지어 재검색 언어코드.
+
+    Returns:
+        gc.VerifyResult: 검증 결과.
+    """
     g_local = adapter.G(addr_local)  # 주소만 지오코딩(업체명 결합은 파싱을 흐림)
     g_en = adapter.G(addr_en)
 
@@ -398,6 +545,15 @@ def combine_matrix(r_local: gc.VerifyResult, r_en: gc.VerifyResult,
 
     R_local/R_en의 내부 판정은 각 Case의 'G.found=True' 서브트리 결과(검증완료/확인필요)로만
     한정된다('실패'는 등장하지 않음).
+
+    Args:
+        r_local (gc.VerifyResult): 현지어 주소 경로 완주 결과.
+        r_en (gc.VerifyResult): 영문 주소 경로 완주 결과.
+        adapter (MapsAdapter, optional): 주입된 Maps 어댑터(현재 미사용, 시그니처 호환).
+        company_std (str, optional): 표준화된 업체명(현재 미사용, 시그니처 호환).
+
+    Returns:
+        gc.VerifyResult: 두 경로를 종합한 최종 검증 결과.
     """
     lv = r_local.status == gc.STATUS_VERIFIED
     ev = r_en.status == gc.STATUS_VERIFIED

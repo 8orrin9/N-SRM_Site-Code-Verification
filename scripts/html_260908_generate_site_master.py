@@ -252,6 +252,11 @@ _used_partner = set()
 
 
 def gen_site_code():
+    """중복되지 않는 Site Code("S"+6자리) 1건을 생성한다.
+
+    Returns:
+        str: 모듈 전역 집합에 아직 없는 유일한 Site Code.
+    """
     while True:
         code = "S" + "".join(str(d) for d in rng.integers(0, 10, size=6))
         if code not in _used_site_codes:
@@ -260,6 +265,11 @@ def gen_site_code():
 
 
 def gen_corp_id():
+    """중복되지 않는 기업식별 코드(10자리 숫자) 1건을 생성한다.
+
+    Returns:
+        str: 유일한 10자리 숫자 문자열.
+    """
     while True:
         cid = "".join(str(d) for d in rng.integers(0, 10, size=10))
         if cid not in _used_corp_ids:
@@ -268,6 +278,13 @@ def gen_corp_id():
 
 
 def gen_duns():
+    """중복되지 않는 Duns No.(9자리) 1건을 생성한다.
+
+    절반은 "NN-NNN-NNNN" 하이픈 형식, 절반은 숫자만으로 표기 변이를 준다.
+
+    Returns:
+        str: 유일한 Duns No.(하이픈 포함 또는 숫자만).
+    """
     while True:
         digits = "".join(str(d) for d in rng.integers(0, 10, size=9))
         if digits in _used_duns:
@@ -280,6 +297,11 @@ def gen_duns():
 
 
 def gen_partner_code():
+    """중복되지 않는 협력사 코드(영문 1자 + 영숫자 3자) 1건을 생성한다.
+
+    Returns:
+        str: 유일한 4자 협력사 코드.
+    """
     alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     alnum = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     while True:
@@ -292,6 +314,11 @@ def gen_partner_code():
 
 
 def gen_date():
+    """2024-01-01 ~ 2026-09-08 범위의 수정일 문자열을 생성한다.
+
+    Returns:
+        str: "YYYY-MM-DD" 형식의 날짜.
+    """
     # 2024-01-01 ~ 2026-09-08
     year = int(rng.choice([2024, 2025, 2026], p=[0.25, 0.45, 0.30]))
     if year == 2026:
@@ -308,7 +335,17 @@ def gen_date():
 # 업체명 / 주소 노이즈 주입
 # ---------------------------------------------------------------------------
 def make_company_name(place, add_noise):
-    """(표시용 업체명, base_en) 반환. add_noise=True면 불완전 표기."""
+    """(표시용 업체명, base_en) 반환. add_noise=True면 불완전 표기.
+
+    노이즈 시 suffix/local_only/typo/case/suffix_local 중 하나를 무작위 적용한다.
+
+    Args:
+        place (dict): 참조 풀의 장소 dict(lang 포함).
+        add_noise (bool): True면 불완전 표기(접미사·로컬·오타 등)를 주입.
+
+    Returns:
+        tuple: (표시용 업체명, base_en). base_en은 노이즈 없는 영문 정규명.
+    """
     lang = place["lang"]
     base_en, base_local = COMPANY_POOL[lang][int(rng.integers(0, len(COMPANY_POOL[lang])))]
 
@@ -337,7 +374,17 @@ def make_company_name(place, add_noise):
 
 
 def clean_address(place, street):
-    """지점(street) 기준 정제된 (영문, 로컬) 주소."""
+    """지점(street) 기준 정제된 (영문, 로컬) 주소.
+
+    언어별 포맷으로 영문·로컬 주소를 조립한다(ko/zh/ja/en·de 분기).
+
+    Args:
+        place (dict): 참조 풀의 장소 dict(city_en/city_local/admin/lang).
+        street (dict): 지점 dict(en/local/postal).
+
+    Returns:
+        tuple: (영문 주소, 로컬 주소).
+    """
     lang = place["lang"]
     region = place["admin"].split(": ")[1]
     clean_en = f"{street['en']}, {place['city_en']}, {region} {street['postal']}"
@@ -354,7 +401,18 @@ def clean_address(place, street):
 
 def make_addresses(place, street, add_noise):
     """지점(street) 고정 상태에서 (주소Eng, 주소Local) 반환.
-    좌표는 street 값으로 별도 부여되므로 여기서는 문자열 표기만 다룸."""
+
+    좌표는 street 값으로 별도 부여되므로 여기서는 문자열 표기만 다룸.
+    노이즈 시 no_postal/typo/abbrev/partial/spacing/mixed 중 하나를 영문 주소에 적용한다.
+
+    Args:
+        place (dict): 참조 풀의 장소 dict.
+        street (dict): 지점 dict.
+        add_noise (bool): True면 영문 주소에 불완전 표기를 주입(로컬은 정제 유지).
+
+    Returns:
+        tuple: (영문 주소, 로컬 주소).
+    """
     clean_en, clean_local = clean_address(place, street)
     if not add_noise:
         return clean_en, clean_local
@@ -381,7 +439,16 @@ def make_addresses(place, street, add_noise):
 
 
 def site_type_and_code(place):
-    """Site 유형 결정 및 항구/공항 코드 반환."""
+    """Site 유형 결정 및 항구/공항 코드 반환.
+
+    85% 제조업체(코드 없음), 8% 항구(UN/LOCODE), 7% 공항(IATA)으로 배분한다.
+
+    Args:
+        place (dict): 참조 풀의 장소 dict(country로 코드 조회).
+
+    Returns:
+        tuple: (Site 유형, 항구/공항 코드). 제조업체면 코드는 "".
+    """
     r = rng.random()
     if r < 0.85:
         return "제조업체", ""
@@ -396,6 +463,19 @@ def site_type_and_code(place):
 # 3) 행 생성
 # ---------------------------------------------------------------------------
 def new_row(place, street_idx, add_noise):
+    """장소·지점 인덱스로 site_master 행 1건을 생성한다.
+
+    좌표는 지점(도로명)의 실제 값을 그대로 쓰고, 업체명·주소에만 노이즈를 준다.
+    출력 제외 메타(_place, _street_idx, _company_base, _noise)를 함께 담는다.
+
+    Args:
+        place (dict): 참조 풀의 장소 dict.
+        street_idx (int): place["streets"] 내 지점 인덱스.
+        add_noise (bool): True면 업체명·주소에 불완전 표기 주입.
+
+    Returns:
+        dict: 한 행의 전체 컬럼 + 내부 메타. No.는 이후 generate에서 채움.
+    """
     street = place["streets"][street_idx]
     company_disp, company_base = make_company_name(place, add_noise)
     addr_en, addr_local = make_addresses(place, street, add_noise)
@@ -430,7 +510,16 @@ def new_row(place, street_idx, add_noise):
 
 def make_duplicate(base_row):
     """base_row 와 '동일 Site 다른 표기'인 near-duplicate 행 생성.
-    동일 지점(같은 도로/좌표)을 공유하되 업체명/주소 표기·Site Code·출처만 다르게."""
+
+    동일 지점(같은 도로/좌표)을 공유하되 업체명/주소 표기·Site Code·출처만 다르게 한다.
+    식별자(Site Code/기업식별 코드/Duns/협력사)는 새로 발급하고 좌표는 base와 동일하게 유지.
+
+    Args:
+        base_row (dict): new_row가 만든 원본 행(내부 메타 포함).
+
+    Returns:
+        dict: near-duplicate 행.
+    """
     place = base_row["_place"]
     street = place["streets"][base_row["_street_idx"]]
     company_base = base_row["_company_base"]
@@ -471,6 +560,14 @@ def make_duplicate(base_row):
 
 
 def generate():
+    """site_master 전체 행(기본 + near-duplicate)을 생성하고 No.를 부여한다.
+
+    기본 행을 가중 분포로 생성한 뒤 일부를 near-duplicate로 복제하고, 순서를 섞어
+    1부터 연번을 매긴다.
+
+    Returns:
+        list: No.가 부여된 전체 행 dict 리스트(N_ROWS건).
+    """
     n_base = N_ROWS - N_DUPLICATE
     rows = []
 
@@ -496,6 +593,13 @@ def generate():
 
 
 def write_csv(rows):
+    """행 리스트를 data/site_master.csv(UTF-8-BOM)로 기록한다.
+
+    COLUMNS에 없는 내부 메타 키는 extrasaction="ignore"로 제외된다.
+
+    Args:
+        rows (list): generate가 만든 행 dict 리스트.
+    """
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")

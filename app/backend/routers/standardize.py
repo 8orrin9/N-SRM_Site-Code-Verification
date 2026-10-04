@@ -18,5 +18,13 @@ class StandardizeBody(BaseModel):
 
 @router.post("")
 def post_standardize(body: StandardizeBody):
+    """입력 행들을 표준화·실재검증한다.
+
+    Args:
+        body (StandardizeBody): 표준화 대상 rows를 담은 요청 본문.
+
+    Returns:
+        dict: {"columns": OUT_COLUMNS, "rows": [...]} 형식의 결과.
+    """
     out_rows = standardize_rows(body.rows)
     return {"columns": OUT_COLUMNS, "rows": out_rows}

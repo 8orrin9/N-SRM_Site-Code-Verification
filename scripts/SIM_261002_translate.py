@@ -29,7 +29,11 @@ _CLIENT_INIT = False
 
 
 def _get_client():
-    """OpenAI 클라이언트 지연 생성 + 캐시. 키 없거나 SDK 미설치면 None(→휴리스틱 폴백)."""
+    """OpenAI 클라이언트 지연 생성 + 캐시. 키 없거나 SDK 미설치면 None(→휴리스틱 폴백).
+
+    Returns:
+        OpenAI | None: 생성된 클라이언트. 키 없음·생성 실패면 None.
+    """
     global _CLIENT, _CLIENT_INIT
     if not _CLIENT_INIT:
         _CLIENT_INIT = True
@@ -47,12 +51,26 @@ def _get_client():
 
 
 def _is_ascii_latin(s: str) -> bool:
-    """영문/숫자/기호 위주(비ASCII 글자가 없음)인지. 영어로 간주해 LLM을 생략한다."""
+    """영문/숫자/기호 위주(비ASCII 글자가 없음)인지. 영어로 간주해 LLM을 생략한다.
+
+    Args:
+        s (str): 판정할 문자열.
+
+    Returns:
+        bool: 비ASCII 글자가 없으면 True.
+    """
     return not any(c for c in s if ord(c) > 0x7F and c.isalpha())
 
 
 def _heuristic_lang(s: str) -> str:
-    """LLM 폴백용 간단 언어 판정. 문자 블록 기반(한글/일본가나/한자/라틴)."""
+    """LLM 폴백용 간단 언어 판정. 문자 블록 기반(한글/일본가나/한자/라틴).
+
+    Args:
+        s (str): 판정할 문자열.
+
+    Returns:
+        str: ISO 639-1 코드("ko"/"ja"/"zh"/"en").
+    """
     for c in s:
         if "가" <= c <= "힣":
             return "ko"
@@ -69,6 +87,12 @@ def detect_and_translate(name: str) -> dict:
     반환: {"lang": ISO 639-1 코드, "name_eng": 영문 업체명}
     - 영문(ASCII) 업체명은 LLM 없이 {"lang": "en", "name_eng": name}.
     - 비영어는 LLM으로 언어코드 + 영문 음역/표기 생성. 실패 시 휴리스틱 폴백.
+
+    Args:
+        name (str): 원본 업체명.
+
+    Returns:
+        dict: {"lang": 언어코드, "name_eng": 영문 업체명}. 빈 입력이면 둘 다 "".
     """
     s = (name or "").strip()
     if not s:
@@ -87,7 +111,14 @@ def detect_and_translate(name: str) -> dict:
 
 
 def _llm_translate(name: str):
-    """OpenAI 호출로 {"lang", "name_eng"} 산출. 실패/키없음이면 None."""
+    """OpenAI 호출로 {"lang", "name_eng"} 산출. 실패/키없음이면 None.
+
+    Args:
+        name (str): 비영어 원본 업체명.
+
+    Returns:
+        dict | None: {"lang", "name_eng"}. 키 없음·호출 실패·빈 응답이면 None.
+    """
     client = _get_client()
     if client is None:
         return None
@@ -119,6 +150,14 @@ def _llm_translate(name: str):
 
 
 def main(argv=None):
+    """CLI 인자로 받은 업체명의 언어·영문 표기를 JSON으로 출력한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0, 인자 없음 1).
+    """
     import sys
     args = argv if argv is not None else sys.argv[1:]
     if not args:

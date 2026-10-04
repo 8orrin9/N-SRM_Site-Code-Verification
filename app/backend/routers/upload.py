@@ -18,6 +18,20 @@ router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 @router.post("/parse")
 async def parse_upload(file: UploadFile = File(...)):
+    """업로드된 xlsx/xls를 파싱해 매핑된 rows를 반환한다.
+
+    pandas로 읽어(dtype=str, 결측 "") 컬럼을 BASE_COLUMNS 기준으로 추리고,
+    나머지는 extra 컬럼으로 보존하며 각 행에 No.(1부터)를 부여한다.
+
+    Args:
+        file (UploadFile): 업로드된 xlsx/xls 파일.
+
+    Returns:
+        dict: {"columns": ["No.", ...], "rows": [...]}.
+
+    Raises:
+        HTTPException: 확장자가 xlsx/xls가 아니거나 읽기 실패 시 400.
+    """
     name = (file.filename or "").lower()
     if not name.endswith((".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="xlsx/xls 파일만 지원합니다.")

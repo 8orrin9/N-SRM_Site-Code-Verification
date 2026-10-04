@@ -17,6 +17,11 @@ _MAP = None
 
 
 def _load():
+    """country_lang.yaml을 1회 읽어 캐시한다.
+
+    Returns:
+        dict: ISO 국가코드 → languageCode 매핑. 파일이 비면 빈 dict.
+    """
     global _MAP
     if _MAP is None:
         with open(_YAML_PATH, encoding="utf-8") as f:
@@ -27,7 +32,14 @@ def _load():
 def lang_for_country(country_field):
     """'CN:중국' 같은 국가/지역 값에서 현지어 languageCode를 조회. 없으면 None.
 
-    콜론 앞의 ISO 국가코드로 조회한다. 빈 값·미매핑이면 None(재검색 생략)."""
+    콜론 앞의 ISO 국가코드로 조회한다. 빈 값·미매핑이면 None(재검색 생략).
+
+    Args:
+        country_field (str): "CN:중국" 형식의 국가/지역 값.
+
+    Returns:
+        str | None: 현지어 languageCode(BCP-47). 빈 값·미매핑이면 None.
+    """
     if not country_field:
         return None
     code = str(country_field).split(":", 1)[0].strip().upper()

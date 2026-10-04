@@ -16,7 +16,17 @@ import STD_VLD_260917_std_company as stdc
 
 @contextlib.contextmanager
 def _override(thresholds: dict | None):
-    """임계치 임시 오버라이드. 없으면 그대로."""
+    """임계치 임시 오버라이드. 없으면 그대로.
+
+    코어 모듈의 전역 상수를 실행 동안만 바꾸고 finally에서 원복한다.
+
+    Args:
+        thresholds (dict | None): name_threshold/addr_jaccard/coord_m/
+            code_max_edits 키를 가질 수 있는 dict. None이면 오버라이드 없음.
+
+    Yields:
+        None: with 블록 실행용.
+    """
     if not thresholds:
         yield
         return
@@ -42,6 +52,13 @@ def run_dedup(rows: list, thresholds: dict | None = None) -> dict:
     """제출된 rows(한국어 컬럼 dict) 기준으로 중복 식별.
 
     반환 인덱스는 제출 rows의 순서를 그대로 가리킨다(프론트가 매핑).
+
+    Args:
+        rows (list): 한국어 컬럼 dict 행 목록.
+        thresholds (dict | None, optional): 임시 오버라이드할 임계치. 기본 None.
+
+    Returns:
+        dict: 코어 dedup 결과(클러스터, 의심 엣지 등).
     """
     with _override(thresholds):
         internal = dd._to_rows(rows)

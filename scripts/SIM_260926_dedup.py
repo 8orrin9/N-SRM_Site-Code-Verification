@@ -68,17 +68,41 @@ ADDRESS_UPPER_LEVELS = frozenset([
 # Union-Find (경로 압축 + union by rank)
 # ---------------------------------------------------------------------------
 class UnionFind:
+    """경로 압축 + union by rank를 적용한 서로소 집합(Disjoint Set)."""
+
     def __init__(self, n):
+        """n개 원소를 각자 독립 집합으로 초기화.
+
+        Args:
+            n (int): 원소 개수.
+        """
         self.parent = list(range(n))
         self.rank = [0] * n
 
     def find(self, x):
+        """x의 대표 원소를 반환(경로 압축 적용).
+
+        Args:
+            x (int): 원소 인덱스.
+
+        Returns:
+            int: x가 속한 집합의 대표 인덱스.
+        """
         while self.parent[x] != x:
             self.parent[x] = self.parent[self.parent[x]]  # 경로 압축
             x = self.parent[x]
         return x
 
     def union(self, a, b):
+        """a와 b가 속한 두 집합을 합친다.
+
+        Args:
+            a (int): 원소 인덱스.
+            b (int): 원소 인덱스.
+
+        Returns:
+            bool: 실제로 합쳐졌으면 True, 이미 같은 집합이면 False.
+        """
         ra, rb = self.find(a), self.find(b)
         if ra == rb:
             return False
@@ -90,6 +114,15 @@ class UnionFind:
         return True
 
     def connected(self, a, b):
+        """a와 b가 같은 집합인지.
+
+        Args:
+            a (int): 원소 인덱스.
+            b (int): 원소 인덱스.
+
+        Returns:
+            bool: 같은 집합이면 True.
+        """
         return self.find(a) == self.find(b)
 
 
@@ -97,7 +130,14 @@ class UnionFind:
 # 정규화
 # ---------------------------------------------------------------------------
 def normalize_code(s):
-    """기업식별코드 정규화: 공백/구분자 제거. 빈 값이면 None."""
+    """기업식별코드 정규화: 공백/구분자 제거. 빈 값이면 None.
+
+    Args:
+        s (str | None): 원본 코드 값.
+
+    Returns:
+        str | None: 영숫자만 남긴 코드. 빈 값이면 None.
+    """
     if not s:
         return None
     out = "".join(ch for ch in str(s) if ch.isalnum())
@@ -105,7 +145,14 @@ def normalize_code(s):
 
 
 def normalize_duns(s):
-    """Duns No. 정규화: '-'/공백 제거. 빈 값이면 None."""
+    """Duns No. 정규화: '-'/공백 제거. 빈 값이면 None.
+
+    Args:
+        s (str | None): 원본 Duns No.
+
+    Returns:
+        str | None: 영숫자만 남긴 값. 빈 값이면 None.
+    """
     if not s:
         return None
     out = "".join(ch for ch in str(s) if ch.isalnum())
@@ -113,18 +160,40 @@ def normalize_duns(s):
 
 
 def _norm_token(s):
-    """주소 값 비교용 소문자/공백정규화."""
+    """주소 값 비교용 소문자/공백정규화.
+
+    Args:
+        s (str | None): 원본 주소 값.
+
+    Returns:
+        str: 소문자화 + 공백 단일화된 문자열.
+    """
     return " ".join(str(s or "").lower().split())
 
 
 def _addr_tokens(s):
-    """주소 값 → 토큰 집합. 소문자화 후 공백/구분자로 분해."""
+    """주소 값 → 토큰 집합. 소문자화 후 공백/구분자로 분해.
+
+    Args:
+        s (str | None): 원본 주소 값.
+
+    Returns:
+        set: 토큰 문자열 집합.
+    """
     import re
     return {t for t in re.split(r"[\s,./\-]+", _norm_token(s)) if t}
 
 
 def _jaccard(set_a, set_b):
-    """두 토큰 집합의 Jaccard 유사도(교집합/합집합)."""
+    """두 토큰 집합의 Jaccard 유사도(교집합/합집합).
+
+    Args:
+        set_a (set): 토큰 집합 A.
+        set_b (set): 토큰 집합 B.
+
+    Returns:
+        float: Jaccard 유사도(0~1). 한쪽이 비면 0.0.
+    """
     if not set_a or not set_b:
         return 0.0
     inter = len(set_a & set_b)
@@ -138,7 +207,13 @@ def _upper_level_same(vals_a, vals_b):
     vals_*: (long_norm, short_norm) 튜플.
     1) 교차 필드 정확 일치: {long,short} 교집합이 있으면 동일(약어/ISO 코드/다국어 흡수).
     2) 오타 허용(초엄격): long 정규화 편집거리 ≤ ADDR_UPPER_MAX_EDITS.
-    반환: True(동일) | False(다름).
+
+    Args:
+        vals_a (tuple): 레벨 A의 (long_norm, short_norm).
+        vals_b (tuple): 레벨 B의 (long_norm, short_norm).
+
+    Returns:
+        bool: 동일 지역이면 True.
     """
     la, sa = vals_a
     lb, sb = vals_b
@@ -155,7 +230,15 @@ def _upper_level_same(vals_a, vals_b):
 # 게이트
 # ---------------------------------------------------------------------------
 def _code_like_gate(a, b):
-    """코드/Duns 공통 판정: 정규화 값 기준 EQUAL/SIMILAR/DIFFERENT/SKIP."""
+    """코드/Duns 공통 판정: 정규화 값 기준 EQUAL/SIMILAR/DIFFERENT/SKIP.
+
+    Args:
+        a (str | None): 정규화된 코드/Duns A.
+        b (str | None): 정규화된 코드/Duns B.
+
+    Returns:
+        str: EQUAL(동일) | SIMILAR(미세 오타) | DIFFERENT | SKIP(한쪽 결측).
+    """
     if a is None or b is None:
         return SKIP
     if a == b:
@@ -167,19 +250,42 @@ def _code_like_gate(a, b):
 
 
 def code_gate(row_a, row_b):
-    """게이트 1: 기업식별코드."""
+    """게이트 1: 기업식별코드.
+
+    Args:
+        row_a (dict): 비교 행 A('code' 키 참조).
+        row_b (dict): 비교 행 B('code' 키 참조).
+
+    Returns:
+        str: EQUAL | SIMILAR | DIFFERENT | SKIP.
+    """
     return _code_like_gate(normalize_code(row_a.get("code")),
                            normalize_code(row_b.get("code")))
 
 
 def duns_gate(row_a, row_b):
-    """게이트 2: Duns No. (게이트 1과 완전 독립)."""
+    """게이트 2: Duns No. (게이트 1과 완전 독립).
+
+    Args:
+        row_a (dict): 비교 행 A('duns' 키 참조).
+        row_b (dict): 비교 행 B('duns' 키 참조).
+
+    Returns:
+        str: EQUAL | SIMILAR | DIFFERENT | SKIP.
+    """
     return _code_like_gate(normalize_duns(row_a.get("duns")),
                            normalize_duns(row_b.get("duns")))
 
 
 def _levels_map(components):
-    """addressComponents → {level: (long_norm, short_norm)}. 상위 레벨 하나만 채택."""
+    """addressComponents → {level: (long_norm, short_norm)}. 상위 레벨 하나만 채택.
+
+    Args:
+        components (list): 정규화된 addressComponents.
+
+    Returns:
+        dict: {레벨명: (long_norm, short_norm)}.
+    """
     out = {}
     for comp in components or []:
         for t in comp.get("types", []):
@@ -190,7 +296,15 @@ def _levels_map(components):
 
 
 def common_address_levels(comp_a, comp_b):
-    """두 대상이 공통으로 가진 레벨을 위계 순서로 반환(요구사항 4-1-1)."""
+    """두 대상이 공통으로 가진 레벨을 위계 순서로 반환(요구사항 4-1-1).
+
+    Args:
+        comp_a (list): 대상 A의 addressComponents.
+        comp_b (list): 대상 B의 addressComponents.
+
+    Returns:
+        tuple: (공통 레벨 리스트, A의 레벨맵, B의 레벨맵).
+    """
     la, lb = _levels_map(comp_a), _levels_map(comp_b)
     return [lv for lv in ADDRESS_LEVELS if lv in la and lv in lb], la, lb
 
@@ -206,6 +320,13 @@ def address_gate(row_a, row_b):
           완전 일치가 아니면 SIMILAR 후보(순서 차이 '26 Euljiro'↔'Euljiro 26' 흡수).
     반환: EQUAL(공통 레벨 전부 동일) | SIMILAR(상위 동일 & 하위만 유사)
         | DIFFERENT | SKIP(공통 레벨 없음).
+
+    Args:
+        row_a (dict): 비교 행 A('components' 키 참조).
+        row_b (dict): 비교 행 B('components' 키 참조).
+
+    Returns:
+        str: EQUAL | SIMILAR | DIFFERENT | SKIP.
     """
     common, la, lb = common_address_levels(row_a.get("components"),
                                            row_b.get("components"))
@@ -249,7 +370,14 @@ COORD_GATE_MIN_LEVELS = frozenset(["route", "street_number"])
 
 
 def _has_building_level_address(components) -> bool:
-    """addressComponents가 건물/필지 단위(도로/번지)까지 존재하는지."""
+    """addressComponents가 건물/필지 단위(도로/번지)까지 존재하는지.
+
+    Args:
+        components (list): 정규화된 addressComponents.
+
+    Returns:
+        bool: route/street_number 레벨이 있으면 True.
+    """
     return bool(_levels_map(components).keys() & COORD_GATE_MIN_LEVELS)
 
 
@@ -264,6 +392,13 @@ def coord_gate(row_a, row_b):
     거리와 무관하게 SKIP — DIFFERENT로도 단정하지 않는 것은, 정보가 부족한
     상태에서의 "멀다"가 "다른 업체"를 보증하지 않기 때문(다른 게이트들의 SKIP
     처리와 동일한 원칙).
+
+    Args:
+        row_a (dict): 비교 행 A('coord'/'components' 키 참조).
+        row_b (dict): 비교 행 B('coord'/'components' 키 참조).
+
+    Returns:
+        str: EQUAL(근접) | DIFFERENT(원거리) | SKIP(좌표·건물레벨 결측).
     """
     ca, cb = row_a.get("coord"), row_b.get("coord")
     if not ca or not cb:
@@ -275,7 +410,16 @@ def coord_gate(row_a, row_b):
 
 
 def name_gate(row_a, row_b):
-    """게이트 5: 표준화 업체명 최종 확인(SIM 재사용). 반환 (verdict, score)."""
+    """게이트 5: 표준화 업체명 최종 확인(SIM 재사용). 반환 (verdict, score).
+
+    Args:
+        row_a (dict): 비교 행 A('std_name' 키 참조).
+        row_b (dict): 비교 행 B('std_name' 키 참조).
+
+    Returns:
+        tuple: (verdict, score). verdict는 EQUAL/DIFFERENT/SKIP,
+            score는 SIM 유사도(0~1) 또는 None.
+    """
     na, nb = row_a.get("std_name"), row_b.get("std_name")
     if not na or not nb:
         return SKIP, None
@@ -292,6 +436,13 @@ def classify_pair(row_a, row_b):
     반환: ("CONFIRMED", reasons, name_score)
         | ("SUSPECT", reason, name_score)
         | ("NONE", None, None)
+
+    Args:
+        row_a (dict): 비교 행 A.
+        row_b (dict): 비교 행 B.
+
+    Returns:
+        tuple: (kind, reason, name_score). kind는 CONFIRMED/SUSPECT/NONE.
     """
     confirm_reason = None
     suspect_reason = None
@@ -334,7 +485,17 @@ def classify_pair(row_a, row_b):
 # 블로킹
 # ---------------------------------------------------------------------------
 def _block_keys(row):
-    """한 행이 속하는 블록 키 집합."""
+    """한 행이 속하는 블록 키 집합.
+
+    코드/Duns/좌표그리드/상위지명/업체명 정규화 키로 블록을 만들어, 전수 비교 대신
+    같은 블록을 공유하는 행끼리만 후보로 삼게 한다.
+
+    Args:
+        row (dict): 비교 행.
+
+    Returns:
+        set: 블록 키 튜플 집합.
+    """
     keys = set()
     code = normalize_code(row.get("code"))
     if code:
@@ -363,7 +524,14 @@ def _block_keys(row):
 
 
 def build_candidate_pairs(rows):
-    """블록 키를 공유하는 행끼리만 후보 쌍(i<j)을 생성."""
+    """블록 키를 공유하는 행끼리만 후보 쌍(i<j)을 생성.
+
+    Args:
+        rows (list): dedup 입력 행 리스트.
+
+    Returns:
+        set: 비교할 (i, j) 인덱스 쌍 집합(i<j).
+    """
     from collections import defaultdict
     buckets = defaultdict(list)
     for i, row in enumerate(rows):
@@ -386,6 +554,12 @@ def dedup(rows):
       {code, duns, std_name, coord:(lat,lon)|None, components:list, status, orig_index}
 
     표준화 실패(STATUS_FAILED) 행은 제외. 반환: {"clusters", "suspects"}.
+
+    Args:
+        rows (list): dedup 입력 행 dict 리스트.
+
+    Returns:
+        dict: {"clusters": 확정 클러스터 리스트, "suspects": 의심 엣지 리스트}.
     """
     # 0. 표준화 실패 행 제외
     active = [i for i, r in enumerate(rows) if r.get("status") != gc.STATUS_FAILED]
@@ -438,6 +612,15 @@ def dedup(rows):
 # 데이터 로딩 / 실행
 # ---------------------------------------------------------------------------
 def _parse_coord(lat_s, lon_s):
+    """위도/경도 문자열을 (lat, lon) float 튜플로 변환. 실패 시 None.
+
+    Args:
+        lat_s: 위도 값(문자열 등).
+        lon_s: 경도 값(문자열 등).
+
+    Returns:
+        tuple | None: (lat, lon). 파싱 불가면 None.
+    """
     try:
         return (float(str(lat_s).strip()), float(str(lon_s).strip()))
     except (ValueError, AttributeError, TypeError):
@@ -445,6 +628,14 @@ def _parse_coord(lat_s, lon_s):
 
 
 def _parse_components(s):
+    """addressComponents JSON 문자열을 리스트로 파싱. 실패/빈 값이면 [].
+
+    Args:
+        s (str | None): JSON 직렬화된 addressComponents.
+
+    Returns:
+        list: 파싱된 컴포넌트 리스트.
+    """
     if not s:
         return []
     try:
@@ -457,7 +648,14 @@ def _to_rows(records):
     """원본 레코드(dict) 리스트 → dedup 입력 행 리스트로 매핑.
 
     컬럼명이 데이터마다 다를 수 있어 안전하게 get으로 접근한다.
-    표준 위도/경도가 있으면 우선, 없으면 원 위/경도 사용."""
+    표준 위도/경도가 있으면 우선, 없으면 원 위/경도 사용.
+
+    Args:
+        records (list): 원본 레코드 dict 리스트.
+
+    Returns:
+        list: dedup 입력 행 dict 리스트.
+    """
     rows = []
     for rec in records:
         lat = rec.get("표준 위도") or rec.get("위도")
@@ -476,6 +674,15 @@ def _to_rows(records):
 
 
 def _load_records(in_path, sheet):
+    """입력 파일(xlsx/csv)을 읽어 레코드 dict 리스트로 반환.
+
+    Args:
+        in_path (str): 입력 파일 경로.
+        sheet (str | None): xlsx 시트명(csv면 무시).
+
+    Returns:
+        list: 레코드 dict 리스트.
+    """
     ext = os.path.splitext(in_path)[1].lower()
     if ext in (".xlsx", ".xls"):
         import pandas as pd
@@ -487,6 +694,15 @@ def _load_records(in_path, sheet):
 
 
 def _fmt_row(rows, idx):
+    """클러스터/엣지 출력용으로 한 행을 사람이 읽는 요약 문자열로 포맷.
+
+    Args:
+        rows (list): dedup 입력 행 리스트.
+        idx (int): 포맷할 행 인덱스.
+
+    Returns:
+        str: 들여쓰기된 요약 문자열(라벨/코드/duns/좌표).
+    """
     r = rows[idx]
     parts = [f"[{idx}] {r['label']}"]
     if r.get("code"):
@@ -499,6 +715,14 @@ def _fmt_row(rows, idx):
 
 
 def main(argv=None):
+    """입력 파일을 읽어 중복 식별 후 클러스터·의심 엣지를 표준출력에 출력한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0).
+    """
     parser = argparse.ArgumentParser(description="중복 Site 식별")
     parser.add_argument("--in", dest="in_path", required=True)
     parser.add_argument("--sheet", default=None, help="xlsx 시트명")

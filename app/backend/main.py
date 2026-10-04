@@ -34,6 +34,12 @@ app.include_router(similarity.router)
 
 @app.get("/api/health")
 def health():
+    """헬스체크 엔드포인트.
+
+    Returns:
+        dict: 서버 생존 여부와 현재 Maps 어댑터 모드.
+            {"ok": True, "adapter_mode": "real"|"mock"}
+    """
     return {"ok": True, "adapter_mode": os.getenv("MAPS_ADAPTER_MODE", "real")}
 
 

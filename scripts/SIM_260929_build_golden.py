@@ -42,12 +42,26 @@ LABEL_COLS = [
 
 # ---------------------------------------------------------------------------
 def synth_code(entity_id: str) -> str:
-    """entity_id → 안정적 6자 대문자 alnum 코드."""
+    """entity_id → 안정적 6자 대문자 alnum 코드.
+
+    Args:
+        entity_id (str): entity 식별자.
+
+    Returns:
+        str: SHA1 기반 6자 대문자 코드.
+    """
     return hashlib.sha1(entity_id.encode()).hexdigest()[:6].upper()
 
 
 def synth_duns(entity_id: str) -> str:
-    """entity_id → NN-NNN-NNNN 형식 9자리 Duns."""
+    """entity_id → NN-NNN-NNNN 형식 9자리 Duns.
+
+    Args:
+        entity_id (str): entity 식별자.
+
+    Returns:
+        str: SHA1 기반 NN-NNN-NNNN 형식 Duns No.
+    """
     d = int(hashlib.sha1(("duns" + entity_id).encode()).hexdigest(), 16) % 10**9
     s = f"{d:09d}"
     return f"{s[:2]}-{s[2:5]}-{s[5:]}"
@@ -58,6 +72,12 @@ def assign_entities(seed_rows: list) -> list:
 
     좌표가 멀면 같은 회사라도 다른 site(FP_branch 실사례)이므로 다른 entity.
     반환: seed_id 순서의 entity_id 리스트.
+
+    Args:
+        seed_rows (list): seed 레코드 dict 리스트.
+
+    Returns:
+        list: seed_id 순서의 entity_id("E000" 등) 리스트.
     """
     n = len(seed_rows)
     uf = ec.dd.UnionFind(n)
@@ -83,7 +103,16 @@ def assign_entities(seed_rows: list) -> list:
 
 
 def _mk_ref_row(seed_row: dict, uid: str, entity_id: str) -> dict:
-    """seed 행 → reference 행(업무 컬럼 + 합성 식별자 + row_uid)."""
+    """seed 행 → reference 행(업무 컬럼 + 합성 식별자 + row_uid).
+
+    Args:
+        seed_row (dict): seed 레코드.
+        uid (str): 부여할 row_uid.
+        entity_id (str): 합성 식별자 생성에 쓸 entity_id.
+
+    Returns:
+        dict: 업무 컬럼 + 합성 코드/Duns가 채워진 reference 행.
+    """
     row = {c: seed_row.get(c, "") for c in BUSINESS_COLS}
     row["row_uid"] = uid
     row["기업식별 코드"] = synth_code(entity_id)
@@ -95,6 +124,27 @@ def _label(uid, entity_id, seed_id, role, case_class, variant_type="",
            perturbed_fields="", difficulty="", compare_uid="", expected_gate="",
            expected_verdict="", component_gates="", expected_match_entity="",
            is_new_numbering=False):
+    """정답 라벨 행 dict를 구성한다(LABEL_COLS 스키마).
+
+    Args:
+        uid (str): row_uid.
+        entity_id (str): entity 식별자.
+        seed_id: 원본 seed 인덱스.
+        role (str): "reference" | "query".
+        case_class (str): 사례 분류(reference/TP_variant/FP_* 등).
+        variant_type (str, optional): 변형 종류 태그.
+        perturbed_fields (str, optional): 변형된 필드 목록.
+        difficulty (str, optional): 난이도(easy/med/hard).
+        compare_uid (str, optional): 비교 대상 reference row_uid.
+        expected_gate (str, optional): 기대 gate 이름.
+        expected_verdict (str, optional): 기대 gate 판정.
+        component_gates (str, optional): 복합 변형의 "gate:verdict;..." 직렬화.
+        expected_match_entity (str, optional): 기대 매칭 entity_id.
+        is_new_numbering (bool, optional): 신규 채번 대상 여부. 기본 False.
+
+    Returns:
+        dict: LABEL_COLS 스키마의 라벨 행.
+    """
     return {
         "row_uid": uid, "entity_id": entity_id, "seed_id": seed_id, "role": role,
         "case_class": case_class, "variant_type": variant_type,
@@ -107,6 +157,11 @@ def _label(uid, entity_id, seed_id, role, case_class, variant_type="",
 
 # 변형 → (함수, 대상 필드 라벨, gate 이름, 난이도)
 def _variant_plan():
+    """단일 필드 변형 계획을 반환.
+
+    Returns:
+        list: (변형함수, 필드라벨, gate이름, 난이도) 튜플 리스트.
+    """
     return [
         (lambda r: pt.name_legal_suffix(r), "name", "name", "easy"),
         (lambda r: pt.name_case_punct(r), "name", "name", "easy"),
@@ -130,6 +185,11 @@ def _variant_plan():
 # 복합 프로파일 → (steps=[(fn, gate)...], difficulty)
 # 여러 필드를 동시 열화해 강신호(N=1.0, g_strong=1.0)를 제거, 점수를 중간대로 낮춘다.
 def _combo_plan():
+    """복합(multi-field) 변형 프로파일 계획을 반환.
+
+    Returns:
+        list: (프로파일명, steps=[(변형함수, gate)...], 난이도) 튜플 리스트.
+    """
     return [
         # ~85점: 이름 2자 오타(N 하락) + 식별자 결측(g_strong=0.85는 addr/coord EQUAL 유지)
         ("combo_mid_high", [
@@ -156,6 +216,20 @@ def _combo_plan():
 
 def build(seed_path: str, sheet: str, variants_per_entity: int,
           combos_per_entity: int = 2):
+    """seed 시트에서 reference/queries/labels 세 데이터셋을 생성한다.
+
+    seed 행에 entity를 할당하고, entity별로 단일/복합 변형 쿼리, Hard Negative,
+    신규 채번·TN 쿼리를 합성한다.
+
+    Args:
+        seed_path (str): seed xlsx 경로.
+        sheet (str): seed 시트명.
+        variants_per_entity (int): entity당 단일 변형 쿼리 수.
+        combos_per_entity (int, optional): entity당 복합 변형 쿼리 수. 기본 2.
+
+    Returns:
+        tuple: (references, queries, labels) 세 리스트.
+    """
     rng = random.Random(SEED)
     df = pd.read_excel(seed_path, sheet_name=sheet, dtype=str).fillna("")
     seed_rows = df.to_dict("records")
@@ -183,6 +257,7 @@ def build(seed_path: str, sheet: str, variants_per_entity: int,
 
     # 변형 소스로 적합한 행(주소/좌표/이름이 충분한 검증완료·확인필요) 선별
     def _rich(sid):
+        """해당 seed 행이 변형 소스로 쓸 만큼 주소/좌표/이름이 충분한지 판정."""
         r = seed_rows[sid]
         g = ec.to_gate_row(r)
         return (r.get("표준화") != ec.gc.STATUS_FAILED and g.get("coord")
@@ -350,7 +425,22 @@ def build(seed_path: str, sheet: str, variants_per_entity: int,
 
 
 def _self_check(references, queries, labels):
-    """데이터셋 정합성 assert (설계 문서 §7)."""
+    """데이터셋 정합성 assert (설계 문서 §7).
+
+    모든 행의 라벨 존재, 식별자 정규화, addressComponents JSON round-trip,
+    결정적 변형의 Oracle gate 판정 일치를 검증한다.
+
+    Args:
+        references (list): reference 행 리스트.
+        queries (list): query 행 리스트.
+        labels (list): 라벨 행 리스트.
+
+    Returns:
+        bool: 모든 검증 통과 시 True.
+
+    Raises:
+        AssertionError: 라벨 누락·식별자 오류·Oracle 불일치 시.
+    """
     import json
     label_by_uid = {l["row_uid"]: l for l in labels}
     # 모든 행에 라벨 존재
@@ -403,6 +493,14 @@ def _self_check(references, queries, labels):
 
 
 def main(argv=None):
+    """Golden Dataset을 생성·검증하고 reference/queries/labels 파일로 저장한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0).
+    """
     ap = argparse.ArgumentParser(description="Golden Dataset 생성")
     ap.add_argument("--seed", default=os.path.join(ec.DATA_DIR,
                     "STD_VLD_260926_site_master_TF_2_std.xlsx"))

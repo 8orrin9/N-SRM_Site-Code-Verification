@@ -27,6 +27,11 @@ DEFAULT_T = 60
 
 # ---------------------------------------------------------------------------
 def _load():
+    """Golden Dataset(reference/queries/labels)을 로드한다.
+
+    Returns:
+        tuple: (ref 레코드 리스트, query 레코드 리스트, {row_uid: 라벨} dict).
+    """
     ref = pd.read_excel(os.path.join(ec.DATA_DIR, "SIM_260929_golden_reference.xlsx"),
                         dtype=str).fillna("").to_dict("records")
     q = pd.read_excel(os.path.join(ec.DATA_DIR, "SIM_260929_golden_queries.xlsx"),
@@ -38,7 +43,17 @@ def _load():
 
 
 def _run_similarity(ref, queries, labels, top_k):
-    """각 쿼리에 대해 find_similar 실행 → ranking/decision 입력 형태로 변환."""
+    """각 쿼리에 대해 find_similar 실행 → ranking/decision 입력 형태로 변환.
+
+    Args:
+        ref (list): reference 레코드 리스트.
+        queries (list): query 레코드 리스트.
+        labels (dict): {row_uid: 라벨}.
+        top_k (int): find_similar 상위 후보 수.
+
+    Returns:
+        tuple: (결과 레코드 리스트, 실패 케이스 리스트).
+    """
     ref_eid = [labels[r["row_uid"]]["entity_id"] for r in ref]
     results, failures = [], []
     for q in queries:
@@ -71,11 +86,28 @@ def _run_similarity(ref, queries, labels, top_k):
 
 
 def _fail_base(rec):
+    """실패 케이스 CSV의 공통 필드를 결과 레코드에서 추출.
+
+    Args:
+        rec (dict): _run_similarity 결과 레코드.
+
+    Returns:
+        dict: {row_uid, case_class, variant_type, top1_score}.
+    """
     return {"row_uid": rec["row_uid"], "case_class": rec["case_class"],
             "variant_type": rec["variant_type"], "top1_score": rec["top1_score"]}
 
 
 def _run_dedup(ref, labels):
+    """reference DB에 dedup을 실행하고 정답 라벨로 지표를 산출한다.
+
+    Args:
+        ref (list): reference 레코드 리스트.
+        labels (dict): {row_uid: 라벨}.
+
+    Returns:
+        tuple: (dedup 결과, 지표 dict, 의심 분석 dict, 정답 라벨 리스트).
+    """
     gate_rows = ec.dd._to_rows(ref)
     result = ec.dd.dedup(gate_rows)
     gold = [labels[r["row_uid"]]["entity_id"] for r in ref]
@@ -87,6 +119,16 @@ def _run_dedup(ref, labels):
 
 
 def _run_gate_diag(ref, queries, labels):
+    """각 쿼리를 비교 대상 reference와 직접 비교해 gate별 기대×실제 진단 행을 만든다.
+
+    Args:
+        ref (list): reference 레코드 리스트.
+        queries (list): query 레코드 리스트.
+        labels (dict): {row_uid: 라벨}.
+
+    Returns:
+        list: {gate, expected, actual, row_uid, variant_type} dict 리스트.
+    """
     ref_by_uid = {r["row_uid"]: r for r in ref}
     q_by_uid = {q["row_uid"]: q for q in queries}
     rows = []
@@ -113,7 +155,17 @@ def _run_gate_diag(ref, queries, labels):
 
 
 def _sweep_thresholds(ref, queries, labels, top_k):
-    """임계값 one-at-a-time 스윕 → [{param,value,dedup_f1,menu4_f1}]."""
+    """임계값 one-at-a-time 스윕 → [{param,value,dedup_f1,menu4_f1}].
+
+    Args:
+        ref (list): reference 레코드 리스트.
+        queries (list): query 레코드 리스트.
+        labels (dict): {row_uid: 라벨}.
+        top_k (int): find_similar 상위 후보 수.
+
+    Returns:
+        list: 파라미터·값별 dedup/Menu4 F1 결과 dict 리스트.
+    """
     grids = {
         "SIM_THRESHOLD": ("name_threshold", [0.80, 0.82, 0.85, 0.88, 0.90, 0.92]),
         "COORD_EQUAL_M": ("coord_m", [50, 75, 100, 150, 200]),
@@ -135,6 +187,19 @@ def _sweep_thresholds(ref, queries, labels, top_k):
 # ---------------------------------------------------------------------------
 def _write_report(path, rank, sweep, dd_m, suspects, gate_conf, gate_rows,
                   sim_res, top_k):
+    """평가 결과를 종합한 Markdown 리포트를 파일로 작성한다.
+
+    Args:
+        path (str): 리포트 출력 경로.
+        rank (dict): ranking_metrics 결과.
+        sweep (list): 임계값 스윕 결과(없으면 빈 리스트).
+        dd_m (dict): dedup_metrics 결과.
+        suspects (dict): suspect_analysis 결과.
+        gate_conf (dict): gate_confusion 결과.
+        gate_rows (list): gate 진단 행 리스트.
+        sim_res (list): _run_similarity 결과.
+        top_k (int): 검색 상위 후보 수.
+    """
     L = []
     L.append("# 유사 검색 / 중복 제거 성능 평가 리포트\n")
     L.append(f"- 대상 로직: `scripts/SIM_260926_dedup.py` (dedup + find_similar)")
@@ -253,11 +318,27 @@ def _write_report(path, rank, sweep, dd_m, suspects, gate_conf, gate_rows,
 
 
 def sweep_best(sim_res):
+    """결정 임계값(T=0~100) 스윕으로 최적 T를 찾는다.
+
+    Args:
+        sim_res (list): _run_similarity 결과.
+
+    Returns:
+        dict: threshold_sweep 결과({curve, best_f1, precision95_min_t}).
+    """
     return mt.threshold_sweep(sim_res)
 
 
 # ---------------------------------------------------------------------------
 def main(argv=None):
+    """Golden Dataset을 로드해 검색·중복·gate 평가를 수행하고 리포트/CSV를 산출한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0).
+    """
     ap = argparse.ArgumentParser(description="Golden Dataset 평가 실행")
     ap.add_argument("--sweep", action="store_true", help="임계값 스윕 수행")
     ap.add_argument("--top-k", type=int, default=8)

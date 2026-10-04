@@ -19,5 +19,13 @@ class SimilarityBody(BaseModel):
 
 @router.post("")
 def post_similarity(body: SimilarityBody):
+    """쿼리 행 각각에 대해 기준 행 중 상위 유사 후보를 검색한다.
+
+    Args:
+        body (SimilarityBody): query_rows, reference_rows, top_k를 담은 요청 본문.
+
+    Returns:
+        dict: {"results": [...]} 형식. 각 쿼리별 유사 후보 목록.
+    """
     results = search(body.query_rows, body.reference_rows, top_k=body.top_k)
     return {"results": results}

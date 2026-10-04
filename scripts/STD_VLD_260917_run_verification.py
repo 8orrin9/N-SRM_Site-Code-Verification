@@ -51,7 +51,14 @@ OUT_COLUMNS = BASE_COLUMNS + EXTRA_COLUMNS
 
 
 def _parse_coord(row):
-    """위도/경도를 (lat, lon) float 튜플로. 없거나 파싱 불가면 None."""
+    """위도/경도를 (lat, lon) float 튜플로. 없거나 파싱 불가면 None.
+
+    Args:
+        row (dict): '위도'/'경도' 키를 가진 레코드.
+
+    Returns:
+        tuple | None: (lat, lon). 값이 없거나 파싱 불가면 None.
+    """
     try:
         lat = float(row.get("위도", "").strip())
         lon = float(row.get("경도", "").strip())
@@ -66,7 +73,14 @@ _KR_ALIASES = {"KR", "KOR", "한국", "대한민국", "SOUTH KOREA", "KOREA", "R
 
 def _is_kr(country_field) -> bool:
     """'국가/지역' 값이 한국인지. 'KR: 한국' 형식의 콜론 앞 코드(locale.py:33 규칙)뿐
-    아니라 '한국'처럼 코드 없이 국가명으로만 적힌 경우도 KR로 인식한다."""
+    아니라 '한국'처럼 코드 없이 국가명으로만 적힌 경우도 KR로 인식한다.
+
+    Args:
+        country_field (str): '국가/지역' 컬럼 값.
+
+    Returns:
+        bool: 코드 또는 국가명이 한국 별칭이면 True.
+    """
     if not country_field:
         return False
     text = str(country_field).strip()
@@ -83,6 +97,12 @@ def _strip_road_paren(road_addr: str) -> str:
 
     이 괄호는 법정동·건물명 참고정보로, STD 주소에는 순수 도로명만 남긴다(컬럼
     '도로명주소'에는 행안부 원본을 그대로 보존).
+
+    Args:
+        road_addr (str): 행안부 roadAddr 원본.
+
+    Returns:
+        str: 끝 괄호 참고항목을 제거한 도로명주소.
     """
     return re.sub(r"\s*\([^)]*\)\s*$", "", road_addr or "").strip()
 
@@ -99,7 +119,14 @@ _NUM_RE = re.compile(r"\d+(-\d+)?(번지)?$")
 
 
 def _strip_country_prefix(addr: str) -> str:
-    """ko 주소 선두의 '대한민국/한국 ' 접두를 제거(행안부 검색어 정리)."""
+    """ko 주소 선두의 '대한민국/한국 ' 접두를 제거(행안부 검색어 정리).
+
+    Args:
+        addr (str): ko 재조회 주소.
+
+    Returns:
+        str: 국가명 접두를 제거한 주소.
+    """
     return _COUNTRY_PREFIX_RE.sub("", (addr or "").strip())
 
 
@@ -110,6 +137,12 @@ def _split_ko_address(ko_addr: str):
     행안부 검색 API는 (a) 시도·시군구를 앞에 붙이거나 (b) 번지 뒤 건물명·층·호·국가
     코드 꼬리가 붙으면 매칭이 깨지므로(실측), 동/도로명~번지까지만 검색어로 추려내고
     시도·시군구는 후보 교차검증에 쓴다.
+
+    Args:
+        ko_addr (str): language=ko 재조회로 얻은 한글 주소.
+
+    Returns:
+        tuple: (시도 str, 시군구 list, 행안부 검색어 str).
     """
     s = _strip_country_prefix(ko_addr)
     toks = s.split()
@@ -145,6 +178,14 @@ def _pick_by_region(candidates, sido, sgg):
 
     시군구 명칭이 ko 주소와 행안부에서 다를 수 있어(예: 서구→서해구) 시도만 필수로
     보고, 시군구까지 일치하는 후보가 있으면 우선 채택한다. 시도 일치가 없으면 None.
+
+    Args:
+        candidates (list): 행안부 resolve_candidates 후보 목록.
+        sido (str): 교차검증용 시도명.
+        sgg (list): 교차검증용 시군구 토큰 리스트.
+
+    Returns:
+        dict | None: 채택 후보. 시도 일치 후보가 없으면 None.
     """
     same_sido = [c for c in candidates if c.get("si_nm") == sido]
     if not same_sido:
@@ -165,6 +206,14 @@ def _unify_kr_road(result, adapter, juso_client):
     language=ko 재조회해 순수 한글 주소를 얻고, 동+지번만 행안부로 조회해 시도·시군구
     교차검증으로 올바른 도로명을 채택한다(동명이동 오매칭 차단). 변환 성공 시 (도로명주소,
     지번주소)를, 실패/대상아님이면 ("", "")를 반환한다(STD 주소는 그대로 둠).
+
+    Args:
+        result (gc.VerifyResult): 실재검증 결과. 성공 시 std_address가 교체된다.
+        adapter (MapsAdapter): language=ko 재조회용 어댑터.
+        juso_client (JusoClient): 행안부 도로명 조회 클라이언트.
+
+    Returns:
+        tuple: (도로명주소 str, 지번주소 str). 실패/대상아님이면 ("", "").
     """
     coord = (result.std_lat, result.std_lon) if result.std_lat is not None else None
     ko_addr = adapter.address_ko(place_id=result.place_id, coord=coord)
@@ -182,7 +231,14 @@ def _unify_kr_road(result, adapter, juso_client):
 
 
 def pick_case(row) -> str:
-    """필드 존재로 Case A/B/C 결정. 좌표·주소 모두 없으면 'X'(실패)."""
+    """필드 존재로 Case A/B/C 결정. 좌표·주소 모두 없으면 'X'(실패).
+
+    Args:
+        row (dict): '주소(Eng)'/'주소(Local)'/'위도'/'경도' 키를 가진 레코드.
+
+    Returns:
+        str: 'C'(주소+좌표) | 'A'(주소) | 'B'(좌표) | 'X'(자원 없음).
+    """
     coord = _parse_coord(row)
     has_addr = bool((row.get("주소(Eng)") or "").strip()) or \
         bool((row.get("주소(Local)") or "").strip())
@@ -201,6 +257,14 @@ def process_row(row, adapter, juso_client=None) -> dict:
     juso_client가 주어진 KR 레코드는, 실재검증으로 STD 주소가 확정된 뒤 행안부로
     도로명 통일 후처리를 수행한다(Google 응답이 영어/혼재·지번으로 나와도 최종 STD
     주소를 한글 도로명으로 맞춘다). 원본 주소(Eng/Local)는 out에 그대로 보존된다.
+
+    Args:
+        row (dict): 원본 레코드 행.
+        adapter (MapsAdapter): 주입된 Maps 어댑터.
+        juso_client (JusoClient, optional): 행안부 클라이언트. None이면 도로명 통일 생략.
+
+    Returns:
+        dict: 원본 컬럼 + STD/산출물 컬럼이 채워진 출력 행.
     """
     disp = (row.get("업체") or "").strip()
     company_std = standardize_company(disp)
@@ -257,6 +321,17 @@ def process_row(row, adapter, juso_client=None) -> dict:
 
 
 def main(argv=None) -> int:
+    """site_master CSV를 읽어 행별 표준화·검증 후 결과 CSV를 기록한다.
+
+    어댑터 모드/입출력 경로/행수 제한을 CLI 인자로 받으며, KR 레코드는 행안부
+    도로명 통일을 적용한다. 처리 후 표준화 상태·분류 코드 분포를 표준출력에 요약한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0).
+    """
     load_dotenv(os.path.join(ROOT, ".env"))
     parser = argparse.ArgumentParser(description="업체 표준화·실재검증 실행")
     parser.add_argument("--mode", choices=["mock", "real"], default=None,

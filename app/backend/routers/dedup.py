@@ -25,6 +25,14 @@ class DedupBody(BaseModel):
 
 @router.post("")
 def post_dedup(body: DedupBody):
+    """중복 식별을 수행한다.
+
+    Args:
+        body (DedupBody): rows와 선택적 임계치(thresholds)를 담은 요청 본문.
+
+    Returns:
+        dict: 코어 dedup 결과(클러스터, 의심 엣지 등).
+    """
     thr = body.thresholds.model_dump(exclude_none=True) if body.thresholds else None
     result = run_dedup(body.rows, thr)
     return result

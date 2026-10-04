@@ -49,7 +49,14 @@ FINAL_COLUMNS = SOURCE_COLUMNS + ["STD 업체명", "STD 주소"] + list(EXTRA_CO
 
 
 def _map_row(src: dict) -> dict:
-    """TF_raw 행 dict를 표준 컬럼명 dict로 변환. 매핑에 없는 컬럼은 보존."""
+    """TF_raw 행 dict를 표준 컬럼명 dict로 변환. 매핑에 없는 컬럼은 보존.
+
+    Args:
+        src (dict): TF_raw 원본 행(컬럼명→값).
+
+    Returns:
+        dict: COLUMN_MAP으로 키를 치환한 행 dict.
+    """
     mapped = {}
     for key, val in src.items():
         std_key = COLUMN_MAP.get(key, key)
@@ -58,12 +65,32 @@ def _map_row(src: dict) -> dict:
 
 
 def _read_rows(in_path: str, sheet: str) -> list:
+    """xlsx 시트를 읽어 NaN을 빈 문자열로 치환한 행 dict 리스트로 반환.
+
+    Args:
+        in_path (str): 입력 xlsx 경로.
+        sheet (str): 읽을 시트명.
+
+    Returns:
+        list: 행 dict 리스트(모든 값 문자열, NaN은 "").
+    """
     df = pd.read_excel(in_path, sheet_name=sheet, dtype=str)
     df = df.where(pd.notna(df), "")  # NaN → 빈 문자열
     return df.to_dict(orient="records")
 
 
 def main(argv=None) -> int:
+    """TF 데이터셋을 읽어 각 행을 process_row로 검증하고 결과 xlsx로 저장한다.
+
+    어댑터 모드/입출력 경로/시트/행수 제한을 CLI 인자로 받으며, 처리 후 표준화 상태·
+    분류 코드 분포를 표준출력에 요약한다.
+
+    Args:
+        argv (list, optional): CLI 인자 리스트. 기본 None(sys.argv 사용).
+
+    Returns:
+        int: 종료 코드(정상 0).
+    """
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     load_dotenv(os.path.join(ROOT, ".env"))

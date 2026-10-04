@@ -44,6 +44,16 @@ def override_thresholds(*, name_threshold=None, addr_jaccard=None, coord_m=None,
     """실행 동안만 코어 임계값을 임시 오버라이드하고 finally 에서 원복한다.
 
     dedup_service._override 와 동일 패턴이며 ADDR_UPPER_MAX_EDITS 까지 확장했다.
+
+    Args:
+        name_threshold (float, optional): 업체명 SIM 임계치.
+        addr_jaccard (float, optional): 하위 주소 토큰 Jaccard 임계.
+        coord_m (float, optional): 좌표 동일 판정 거리(m).
+        code_max_edits (int, optional): 코드/Duns 유사 최대 편집거리.
+        addr_upper_max_edits (int, optional): 상위 주소 오타 허용 최대 편집거리.
+
+    Yields:
+        None: 오버라이드가 적용된 컨텍스트.
     """
     mapping = {
         "name_threshold": (stdc, "SIM_THRESHOLD", name_threshold),
@@ -68,6 +78,12 @@ def to_gate_row(record: dict) -> dict:
     """한국어 키 dict 1건 → dedup 내부 게이트 입력 dict.
 
     find_similar._prep 와 동일하게 std_name 이 비면 label(업체/업체명)로 폴백한다.
+
+    Args:
+        record (dict): 한국어 키 레코드 1건.
+
+    Returns:
+        dict: dedup 게이트 입력 행(std_name 폴백 적용).
     """
     g = dd._to_rows([record])[0]
     if not g.get("std_name"):
@@ -79,6 +95,13 @@ def gate_verdicts(rec_a: dict, rec_b: dict) -> dict:
     """두 한국어 키 dict 에 대한 게이트별 판정 {code,duns,addr,coord,name}.
 
     per-gate 진단용. name 은 (verdict, score) 중 verdict 만 취한다.
+
+    Args:
+        rec_a (dict): 한국어 키 레코드 A.
+        rec_b (dict): 한국어 키 레코드 B.
+
+    Returns:
+        dict: {code, duns, addr, coord, name} 게이트별 판정.
     """
     ga, gb = to_gate_row(rec_a), to_gate_row(rec_b)
     name_verdict, _ = dd.name_gate(ga, gb)

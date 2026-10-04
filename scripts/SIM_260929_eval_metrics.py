@@ -21,6 +21,12 @@ def ranking_metrics(query_results: list):
     """query_results: [{expected_entity, is_new, ranked_entities:[eid...]}]
 
     TP 쿼리(expected_entity 존재)에 대한 Top-1/Recall@k/MRR.
+
+    Args:
+        query_results (list): 쿼리 결과 dict 리스트.
+
+    Returns:
+        dict: {n_tp_queries, top1_accuracy, recall_at_k, mrr}. TP 없으면 {}.
     """
     tp = [q for q in query_results if q["expected_entity"] and not q["is_new"]]
     if not tp:
@@ -56,6 +62,13 @@ def decision_at_threshold(query_results: list, t: int):
     예측: top1_score >= t 이고 top1_entity == expected 이면 정매핑(TP).
           top1_score >= t 인데 신규거나 엉뚱한 entity 면 오매핑(FP).
           top1_score < t 이면 신규채번 예측.
+
+    Args:
+        query_results (list): 쿼리 결과 dict 리스트.
+        t (int): 매핑/신규 결정 기준 점수.
+
+    Returns:
+        dict: {t, tp, fp, fn, tn, precision, recall, f1, tpr, fpr}.
     """
     tp = fp = fn = tn = 0
     for q in query_results:
@@ -89,8 +102,15 @@ def score_distribution(query_results: list):
 
     복합 변형이 실제로 점수를 중간대로 퍼뜨리는지(sweep 변별력 확보) 검증한다.
     반환: {group_key: {n, min, p25, median, p75, max, mean}}
+
+    Args:
+        query_results (list): 쿼리 결과 dict 리스트.
+
+    Returns:
+        dict: {group_key: 점수 요약 통계}. group_key는 'class:'/'variant:'/'difficulty:' 접두.
     """
     def _summary(vals):
+        """점수 리스트의 분위 통계(min/p25/median/p75/max/mean)를 반환."""
         v = sorted(vals)
         n = len(v)
         mean = sum(v) / n
@@ -113,7 +133,15 @@ def score_distribution(query_results: list):
 
 
 def threshold_sweep(query_results: list, ts=range(0, 101)):
-    """t=0..100 결정 성능 곡선 + F1 최대 / precision>=0.95 최소 t."""
+    """t=0..100 결정 성능 곡선 + F1 최대 / precision>=0.95 최소 t.
+
+    Args:
+        query_results (list): 쿼리 결과 dict 리스트.
+        ts (iterable, optional): 스윕할 기준 점수 범위. 기본 range(0, 101).
+
+    Returns:
+        dict: {curve, best_f1, precision95_min_t}.
+    """
     curve = [decision_at_threshold(query_results, t) for t in ts]
     best_f1 = max(curve, key=lambda r: r["f1"])
     hi_prec = [r for r in curve if r["precision"] >= 0.95]
@@ -125,7 +153,14 @@ def threshold_sweep(query_results: list, ts=range(0, 101)):
 # Menu 3 — 중복 제거 품질
 # ---------------------------------------------------------------------------
 def _pairs_within(groups):
-    """[[idx...]] 클러스터 → 같은 그룹 내 (i<j) 쌍 집합."""
+    """[[idx...]] 클러스터 → 같은 그룹 내 (i<j) 쌍 집합.
+
+    Args:
+        groups (iterable): 멤버 인덱스 리스트들의 모음.
+
+    Returns:
+        set: 같은 그룹에 속한 (i, j) 쌍 집합(i<j).
+    """
     pairs = set()
     for members in groups:
         m = sorted(members)
@@ -141,6 +176,14 @@ def dedup_metrics(clusters, gold_labels, active_idx):
     active_idx: 평가 대상 행 인덱스 리스트 (실패행 제외 등)
 
     반환: pairwise P/R/F1, 클러스터 지표, 오병합 쌍 목록.
+
+    Args:
+        clusters (list): dedup 결과 클러스터 리스트.
+        gold_labels (dict | list): 행 인덱스 → 정답 entity_id.
+        active_idx (iterable): 평가 대상 행 인덱스.
+
+    Returns:
+        dict: {pairwise, cluster, false_merges, n_clusters}.
     """
     active = list(active_idx)
     # 예측 쌍
@@ -190,7 +233,15 @@ def dedup_metrics(clusters, gold_labels, active_idx):
 
 
 def suspect_analysis(suspects, gold_labels):
-    """의심 엣지의 TP(동일 entity)/FP(다른 entity) + 사유 분포."""
+    """의심 엣지의 TP(동일 entity)/FP(다른 entity) + 사유 분포.
+
+    Args:
+        suspects (list): dedup 의심 엣지 리스트.
+        gold_labels (dict | list): 행 인덱스 → 정답 entity_id.
+
+    Returns:
+        dict: {n, tp, fp, reasons}.
+    """
     tp = fp = 0
     reasons = {}
     for e in suspects:
@@ -208,7 +259,14 @@ def suspect_analysis(suspects, gold_labels):
 # per-gate 진단
 # ---------------------------------------------------------------------------
 def gate_confusion(rows):
-    """rows: [{gate, expected, actual}] → gate 별 expected×actual 혼동행렬."""
+    """rows: [{gate, expected, actual}] → gate 별 expected×actual 혼동행렬.
+
+    Args:
+        rows (list): {gate, expected, actual} dict 리스트.
+
+    Returns:
+        dict: {gate: {expected_verdict: {actual_verdict: count}}}.
+    """
     out = {}
     for r in rows:
         g = r["gate"]

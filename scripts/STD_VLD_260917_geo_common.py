@@ -40,7 +40,14 @@ STATUS_FAILED = "실패"
 
 
 def status_for_code(code: str) -> str:
-    """분류 코드 접두어로 표준화 상태를 결정한다."""
+    """분류 코드 접두어로 표준화 상태를 결정한다.
+
+    Args:
+        code (str): 분류 코드(VERIFIED_*/UNVERIFIED_*/FAILED_*).
+
+    Returns:
+        str: 표준화 3단계 상태(STATUS_VERIFIED/UNVERIFIED/FAILED).
+    """
     if code.startswith("VERIFIED_"):
         return STATUS_VERIFIED
     if code.startswith("UNVERIFIED_"):
@@ -88,7 +95,15 @@ _MULTISPACE_RE = re.compile(r"\s{2,}")
 
 
 def _find_matches(text: str, candidates):
-    """text 안에 등장하는 마스터 후보를 원문 순서대로(중복 제거) 반환."""
+    """text 안에 등장하는 마스터 후보를 원문 순서대로(중복 제거) 반환.
+
+    Args:
+        text (str): 검색 대상 주소 문자열.
+        candidates (list): 매칭을 시도할 마스터 후보 목록.
+
+    Returns:
+        list: text에 포함된 후보들(후보 목록 순서, 중복 제거).
+    """
     found = []
     for c in candidates:
         if c and c in text and c not in found:
@@ -104,6 +119,13 @@ def reduce_address(address_text: str, level: int) -> str:
           2: 주소에서 매칭된 '도시/행정구역' 위치만 (대략적 위치)
           3: 주소에서 매칭된 '국가'만 (광역 폴백)
     매칭이 없으면 상위 레벨은 원문 tail로 폴백한다.
+
+    Args:
+        address_text (str): 축약할 원본 주소 문자열.
+        level (int): 축약 단계(0~3). 클수록 더 광역으로 축소.
+
+    Returns:
+        str: 지정 레벨로 축약된 주소 문자열.
     """
     text = (address_text or "").strip()
     if level <= 0:
@@ -141,7 +163,15 @@ def reduce_address(address_text: str, level: int) -> str:
 # 거리 / 비교
 # ---------------------------------------------------------------------------
 def haversine(c1, c2) -> float:
-    """두 (lat, lon) 사이 거리(m). Haversine 공식."""
+    """두 (lat, lon) 사이 거리(m). Haversine 공식.
+
+    Args:
+        c1 (tuple): 좌표 1 (lat, lon).
+        c2 (tuple): 좌표 2 (lat, lon).
+
+    Returns:
+        float: 두 좌표 사이 거리(미터).
+    """
     lat1, lon1 = c1
     lat2, lon2 = c2
     r = 6371000.0  # 지구 반지름(m)
@@ -155,7 +185,18 @@ def haversine(c1, c2) -> float:
 def CMP(id_1, id_2, coord_1, coord_2, tol_m: float = CMP_TOLERANCE_M) -> str:
     """설계 문서 1장. 두 후보가 동일 업체인지 판정.
 
-    반환: "MATCH" | "PROXIMITY_MATCH" | "MISMATCH"
+    place_id가 같으면 MATCH, 다르더라도 좌표가 tol_m 이내면 PROXIMITY_MATCH,
+    그 외는 MISMATCH.
+
+    Args:
+        id_1 (str | None): 후보 1 place_id.
+        id_2 (str | None): 후보 2 place_id.
+        coord_1 (tuple | None): 후보 1 좌표 (lat, lon).
+        coord_2 (tuple | None): 후보 2 좌표 (lat, lon).
+        tol_m (float, optional): 근접 허용 거리(m). 기본 CMP_TOLERANCE_M.
+
+    Returns:
+        str: "MATCH" | "PROXIMITY_MATCH" | "MISMATCH".
     """
     if id_1 and id_2 and id_1 == id_2:
         return "MATCH"
@@ -172,7 +213,13 @@ def normalize_address_components(raw, source_api: str):
 
     source_api: "geocoding" (types/long_name/short_name)
               | "places_new" (types/longText/shortText/languageCode)
-    반환: [{types, long_text, short_text, language_code, source_api}, ...]
+
+    Args:
+        raw (list): API가 반환한 원본 addressComponents.
+        source_api (str): 원본 API 종류("geocoding" | "places_new").
+
+    Returns:
+        list: [{types, long_text, short_text, language_code, source_api}, ...].
     """
     out = []
     for comp in raw or []:
@@ -207,6 +254,12 @@ def has_detail_below_locality(components) -> bool:
 
     실재검증 실패로 표준주소가 도시/행정구역 레벨까지만 뭉개진 경우(False), 사용자
     검토용 URL은 상세 주소를 담은 원본 주소로 검색하는 편이 더 유용하다(참조 URL 선택).
+
+    Args:
+        components (list): 정규화된 addressComponents.
+
+    Returns:
+        bool: sublocality/route/street_number 중 하나라도 있으면 True.
     """
     for comp in components or []:
         if _DETAIL_ADDRESS_LEVELS & set(comp.get("types", [])):
@@ -232,5 +285,13 @@ class VerifyResult:
 
 
 def make_result(code: str, **kwargs) -> VerifyResult:
-    """분류 코드로부터 status를 자동 설정해 VerifyResult 생성."""
+    """분류 코드로부터 status를 자동 설정해 VerifyResult 생성.
+
+    Args:
+        code (str): 분류 코드.
+        **kwargs: VerifyResult의 나머지 필드(note, std_address 등).
+
+    Returns:
+        VerifyResult: status가 코드에 맞게 설정된 결과 객체.
+    """
     return VerifyResult(status=status_for_code(code), code=code, **kwargs)

@@ -47,6 +47,14 @@ for _lang, pairs in COMPANY_POOL.items():
 
 
 def normalize(name):
+    """업체명에서 불용어(접미사)를 제거하고 소문자로 정규화한다.
+
+    Args:
+        name (str): 원본 업체명.
+
+    Returns:
+        str: 접미사 제거 + 소문자화된 문자열.
+    """
     n = name.strip()
     for suf in ALL_SUFFIX:
         n = n.replace(suf, "")
@@ -54,7 +62,14 @@ def normalize(name):
 
 
 def match_base(name):
-    """표기(오타·불용어·로컬)로부터 정규 업체명(base_en) 추정."""
+    """표기(오타·불용어·로컬)로부터 정규 업체명(base_en) 추정.
+
+    Args:
+        name (str): 원본 업체명 표기.
+
+    Returns:
+        str | None: 추정된 base_en. 최대 유사도 0.6 미만이면 None.
+    """
     n = normalize(name)
     best, best_r = None, 0.0
     for en, variant in BASES:
@@ -74,6 +89,12 @@ def std_of(r):
     - noisy : 원본 표기가 표준과 다른(=표준화 여지가 있는) 행인지.
     - latDisp/lonDisp : 화면 표시용 좌표. 노이즈 행은 저정밀(2자리)로 낮춰
                         Geocoding 교정 효과가 드러나게 한다.
+
+    Args:
+        r (dict): site_master CSV 행.
+
+    Returns:
+        dict: addrStd/companyStd/latStd/lonStd/noisy/latDisp/lonDisp.
     """
     key = (r["위도"], r["경도"])
     place, street = COORD2STREET.get(key, (None, None))
@@ -92,16 +113,41 @@ def std_of(r):
 
 def std_filled(r):
     """초기 표준화 완료 여부(결정적). 이미 확정된 Site 또는 No.가 3의 배수인
-    행은 표준화가 끝난 것으로 미리 채워 Before/After 를 함께 보여준다."""
+    행은 표준화가 끝난 것으로 미리 채워 Before/After 를 함께 보여준다.
+
+    Args:
+        r (dict): site_master CSV 행.
+
+    Returns:
+        bool: 표준화 완료로 간주하면 True.
+    """
     return r["Status"] == "등록확정" or int(r["No."]) % 3 == 0
 
 
 def ratio(a, b):
+    """두 문자열의 소문자 기준 SequenceMatcher 유사도(0~1).
+
+    Args:
+        a (str): 문자열 A.
+        b (str): 문자열 B.
+
+    Returns:
+        float: 유사도(0~1).
+    """
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
 def sims(reg, rec, band):
-    """등록 시도 행(reg)과 추천 행(rec) 사이의 항목별/평균 유사도(%)."""
+    """등록 시도 행(reg)과 추천 행(rec) 사이의 항목별/평균 유사도(%).
+
+    Args:
+        reg (dict): 등록 시도 행.
+        rec (dict): 추천 대상 행.
+        band (str): 유사도 대역("high" | "mid" | "low").
+
+    Returns:
+        dict: {nameSim, addrSim, corpSim, dunsSim, avg} (0~100 %).
+    """
     raw_name = ratio(normalize(reg["업체"]), normalize(rec["업체"]))
     raw_addr = ratio(reg["주소(Eng)"], rec["주소(Eng)"])
     if band == "high":
@@ -122,6 +168,7 @@ def sims(reg, rec, band):
     avg = 0.5 * name + 0.4 * addr + 0.05 * corp + 0.05 * duns
 
     def f(x):
+        """유사도 값을 100 상한으로 소수 2자리 반올림."""
         return round(min(x, 100.0), 2)
 
     return dict(nameSim=f(name), addrSim=f(addr), corpSim=f(corp),
@@ -129,6 +176,16 @@ def sims(reg, rec, band):
 
 
 def rec_obj(reg, rec, band):
+    """등록 시도 행 + 추천 행을 목업 추천 카드 객체로 구성한다.
+
+    Args:
+        reg (dict): 등록 시도 행.
+        rec (dict): 추천 대상 행.
+        band (str): 유사도 대역("high" | "mid" | "low").
+
+    Returns:
+        dict: no/status/sub/rec/modified 구조의 추천 객체.
+    """
     s = sims(reg, rec, band)
     std = std_of(reg)
     return {
@@ -168,7 +225,14 @@ def rec_obj(reg, rec, band):
 
 
 def hist_obj(r):
-    """검증이력 행: 확정된 Site의 하위 공급망 정보(자체 Site Code 포함)."""
+    """검증이력 행: 확정된 Site의 하위 공급망 정보(자체 Site Code 포함).
+
+    Args:
+        r (dict): site_master CSV 행(등록확정).
+
+    Returns:
+        dict: no/status/sub/modified 구조의 이력 객체.
+    """
     std = std_of(r)
     return {
         "no": int(r["No."]),
@@ -193,7 +257,14 @@ def hist_obj(r):
 
 
 def master_obj(r):
-    """Site Registration 관리 화면용: Site 마스터 원본 전체 필드."""
+    """Site Registration 관리 화면용: Site 마스터 원본 전체 필드.
+
+    Args:
+        r (dict): site_master CSV 행.
+
+    Returns:
+        dict: no/status/siteCode 등 마스터 전체 필드 + 표준화 파생값.
+    """
     std = std_of(r)
     return {
         "no": int(r["No."]),
@@ -218,6 +289,11 @@ def master_obj(r):
 
 
 def load_rows():
+    """site_master.csv를 읽어 행별 파생 키(_base, _coord)를 덧붙여 반환한다.
+
+    Returns:
+        list: dict 행 리스트. 각 행에 _base(추정 정규 업체명), _coord(좌표 튜플) 추가.
+    """
     rows = []
     with open(CSV_PATH, encoding="utf-8-sig", newline="") as f:
         for r in csv.DictReader(f):
@@ -228,6 +304,14 @@ def load_rows():
 
 
 def build():
+    """목업 JSON 전체 구조를 생성한다.
+
+    high/mid/low 대역으로 near-duplicate 관계를 분류하고, 등록확정 이력(history)과
+    마스터 전체(master)를 합쳐 화면별 데이터 묶음을 만든다.
+
+    Returns:
+        dict: newAssign/codeLink/confirm/history/master 키의 목업 데이터.
+    """
     rows = load_rows()
     used = set()
 

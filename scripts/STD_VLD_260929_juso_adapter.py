@@ -18,6 +18,12 @@ class JusoClient:
     """행안부 도로명주소 검색 API 클라이언트."""
 
     def __init__(self, confm_key: str, session=None):
+        """클라이언트를 초기화한다.
+
+        Args:
+            confm_key (str): 행안부 발급 승인키(confmKey).
+            session (requests.Session, optional): 재사용할 세션. 없으면 새로 생성.
+        """
         self.confm_key = confm_key
         self.session = session or requests.Session()
 
@@ -26,6 +32,12 @@ class JusoClient:
 
         반환: {road_addr, jibun_addr, zip_no, eng_addr}
         네트워크·파싱 예외는 None으로 흡수해 호출부가 기존 결과로 폴백하도록 한다.
+
+        Args:
+            keyword (str): 검색할 한글 주소(지번/도로명 무관).
+
+        Returns:
+            dict | None: 최상위 후보 1건. 매칭 실패·오류 시 None.
         """
         cands = self.resolve_candidates(keyword, count=1)
         return cands[0] if cands else None
@@ -35,6 +47,14 @@ class JusoClient:
 
         시/도·시군구 명칭이 다른 동명이동을 호출부가 교차검증으로 거를 수 있도록
         후보마다 si_nm(시도)·sgg_nm(시군구)을 함께 담는다. 실패/오류 시 빈 리스트.
+
+        Args:
+            keyword (str): 검색할 한글 주소.
+            count (int, optional): 최대 후보 수. 기본 10.
+
+        Returns:
+            list: {road_addr, jibun_addr, zip_no, eng_addr, si_nm, sgg_nm} 리스트.
+                빈 keyword·실패·오류 시 빈 리스트.
         """
         keyword = (keyword or "").strip()
         if not keyword:
@@ -70,7 +90,14 @@ class JusoClient:
 
 
 def make_juso_client(confm_key: str):
-    """confmKey가 있으면 JusoClient, 없으면 None(도로명 변환 비활성)."""
+    """confmKey가 있으면 JusoClient, 없으면 None(도로명 변환 비활성).
+
+    Args:
+        confm_key (str): 행안부 승인키. 빈 값이면 비활성.
+
+    Returns:
+        JusoClient | None: 승인키가 있으면 클라이언트, 없으면 None.
+    """
     if not confm_key:
         return None
     return JusoClient(confm_key)

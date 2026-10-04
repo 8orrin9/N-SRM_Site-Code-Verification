@@ -71,7 +71,18 @@ class MapsAdapter(abc.ABC):
 
 
 def make_adapter(mode: str, *, api_key: str = None) -> MapsAdapter:
-    """mode: 'mock' | 'real'."""
+    """모드에 맞는 Maps 어댑터를 생성한다.
+
+    Args:
+        mode (str): 'mock' 또는 'real'.
+        api_key (str, optional): real 모드에서 필요한 Google Maps API 키.
+
+    Returns:
+        MapsAdapter: RealMapsAdapter(real) 또는 MockMapsAdapter(그 외).
+
+    Raises:
+        ValueError: real 모드인데 api_key가 없을 때.
+    """
     if mode == "real":
         if not api_key:
             raise ValueError(
@@ -89,10 +100,12 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def _slug(text: str) -> str:
+    """텍스트를 소문자 하이픈 슬러그로 변환한다(place_id 생성용)."""
     return _SLUG_RE.sub("-", text.lower()).strip("-")
 
 
 def _has_cjk(s: str) -> bool:
+    """문자열에 CJK(한중일) 문자가 포함되어 있는지 판정한다."""
     return any(
         "　" <= c <= "鿿" or "가" <= c <= "힣" or "぀" <= c <= "ヿ"
         for c in s
@@ -120,6 +133,7 @@ class MockMapsAdapter(MapsAdapter):
     """PLACES 참조 데이터 기반 결정적 Mock."""
 
     def __init__(self):
+        """PLACES 참조 데이터로 도로 인덱스·좌표 인덱스·검색어를 구성한다."""
         # 모든 도로를 결정적 순서로 인덱싱
         self._streets = []                # [(place, street, index)]
         self._coord_index = {}            # (lat6, lon6) → index
@@ -141,10 +155,25 @@ class MockMapsAdapter(MapsAdapter):
 
     # ---- 내부 유틸 ----
     def _scenario(self, idx: int) -> str:
+        """도로 인덱스를 고정 시나리오로 매핑한다(없으면 'direct').
+
+        Args:
+            idx (int): 도로 인덱스.
+
+        Returns:
+            str: 해당 도로에 배정된 시나리오 이름.
+        """
         return _SCENARIO_BY_MOD.get(idx % 12, "direct")
 
     def _resolve_by_text(self, text: str):
-        """주소/쿼리 문자열로 가장 잘 맞는 도로를 찾는다. (place, street, idx) 또는 None."""
+        """주소/쿼리 문자열로 가장 잘 맞는 도로를 찾는다.
+
+        Args:
+            text (str): 주소 또는 검색 쿼리 문자열.
+
+        Returns:
+            tuple | None: (place, street, idx). 점수 60 미만이면 None.
+        """
         from rapidfuzz.fuzz import partial_ratio
         best, best_score = None, 0.0
         for (place, street, idx), terms in zip(self._streets, self._search_terms):
@@ -154,7 +183,14 @@ class MockMapsAdapter(MapsAdapter):
         return best if best_score >= 60 else None
 
     def _resolve_by_coord(self, coord):
-        """좌표에서 가장 가까운 도로를 찾는다. (place, street, idx)."""
+        """좌표에서 가장 가까운 도로를 찾는다.
+
+        Args:
+            coord (tuple): 기준 좌표 (lat, lon).
+
+        Returns:
+            tuple: 가장 가까운 (place, street, idx).
+        """
         best, best_d = None, float("inf")
         for place, street, idx in self._streets:
             d = gc.haversine(coord, (street["lat"], street["lon"]))
@@ -163,7 +199,16 @@ class MockMapsAdapter(MapsAdapter):
         return best
 
     def _components(self, place, street, source_api):
-        """place/street에서 addressComponents 원본(소스 스키마)을 만들어 정규화."""
+        """place/street에서 addressComponents 원본(소스 스키마)을 만들어 정규화.
+
+        Args:
+            place (dict): PLACES 항목.
+            street (dict): place 내 도로 항목.
+            source_api (str): "geocoding" | "places_new".
+
+        Returns:
+            list: 정규화된 addressComponents.
+        """
         region = place["admin"].split(": ")[1]
         if source_api == "geocoding":
             raw = [
@@ -193,6 +238,17 @@ class MockMapsAdapter(MapsAdapter):
 
     # ---- 서브루틴 ----
     def G(self, query: str) -> dict:
+        """Geocoding(Mock). 주소 텍스트를 도로로 해석해 결정적 응답을 만든다.
+
+        해석된 도로의 시나리오에 따라 실패/오프셋/듀얼 불일치를 재현한다.
+
+        Args:
+            query (str): 주소 문자열(업체명 미포함).
+
+        Returns:
+            dict: {found, address_std, coord_std, place_id_g,
+                address_components_g, location_type}.
+        """
         hit = self._resolve_by_text(query)
         if hit is None:
             return {"found": False, "address_std": None, "coord_std": None,
@@ -232,12 +288,27 @@ class MockMapsAdapter(MapsAdapter):
         }
 
     def _sibling_street(self, place, street):
+        """같은 place 내에서 주어진 street가 아닌 다른 도로 하나를 반환한다(없으면 None)."""
         for s in place["streets"]:
             if s is not street:
                 return s
         return None
 
     def TS(self, company: str, center_coord, *, precise=False, lang=None) -> dict:
+        """좌표 중심 업체명 TextSearch(Mock).
+
+        좌표로 도로를 찾아 그 시나리오대로 발견/완화/근접/불일치를 재현한다.
+        precise/lang은 Real 어댑터 호환용 인자로 Mock에서는 무시한다.
+
+        Args:
+            company (str): 검색 업체명.
+            center_coord (tuple): 검색 중심 좌표 (lat, lon).
+            precise (bool, optional): Real 호환 플래그(무시).
+            lang (str, optional): Real 호환 언어코드(무시).
+
+        Returns:
+            dict: {found, relaxed, place_id_t, coord_t, address_components_t, ...}.
+        """
         # precise: Real 어댑터의 근접보강 플래그. Mock은 좌표 정밀도 개념이 없어 무시.
         # lang: Real 어댑터의 현지어 재검색용. Mock은 언어 개념이 없어 무시.
         place, street, idx = self._resolve_by_coord(center_coord)
@@ -295,6 +366,18 @@ class MockMapsAdapter(MapsAdapter):
         }
 
     def TSA(self, company: str, address_text: str, *, lang=None) -> dict:
+        """업체명+주소 TextSearch(Mock). 주소 레벨을 축약하며(L1→L3) 재시도한다.
+
+        lang은 Real 어댑터 호환용 인자로 Mock에서는 무시한다.
+
+        Args:
+            company (str): 검색 업체명.
+            address_text (str): 검색 주소 텍스트.
+            lang (str, optional): Real 호환 언어코드(무시).
+
+        Returns:
+            dict: {found, level, place_id_t, address_std, address_components_t}.
+        """
         # lang: Real 어댑터의 현지어 재검색용. Mock은 언어 개념이 없어 무시.
         # 주소 레벨을 축약해가며(L1→L3) 재시도
         for level in (1, 2, 3):
@@ -317,6 +400,14 @@ class MockMapsAdapter(MapsAdapter):
                 "address_std": None, "address_components_t": []}
 
     def RG(self, coord) -> dict:
+        """Reverse Geocoding(Mock). 좌표에서 가장 가까운 도로의 주소를 반환한다.
+
+        Args:
+            coord (tuple): 역지오코딩할 좌표 (lat, lon).
+
+        Returns:
+            dict: {address_rg, address_components_rg}.
+        """
         place, street, _ = self._resolve_by_coord(coord)
         addr_std, _ = clean_address(place, street)
         return {"address_rg": addr_std,
@@ -333,12 +424,26 @@ class RealMapsAdapter(MapsAdapter):
     TEXTSEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 
     def __init__(self, api_key: str, session=None):
+        """API 키와 HTTP 세션을 보관한다.
+
+        Args:
+            api_key (str): Google Maps API 키.
+            session (requests.Session, optional): 재사용할 세션. 없으면 새로 생성.
+        """
         import requests
         self.api_key = api_key
         self.session = session or requests.Session()
 
     # ---- Geocoding (G, RG 공용) ----
     def _geocode(self, params):
+        """Geocoding REST 호출 공용 래퍼(G/RG/address_ko가 공유).
+
+        Args:
+            params (dict): key를 제외한 쿼리 파라미터.
+
+        Returns:
+            dict: Geocoding API JSON 응답.
+        """
         p = {"key": self.api_key, **params}  # 언어 미지정 → 원문(현지 표기) 주소 반환
         resp = self.session.get(self.GEOCODE_URL, params=p, timeout=15)
         resp.raise_for_status()
@@ -366,6 +471,15 @@ class RealMapsAdapter(MapsAdapter):
             return None
 
     def G(self, query: str) -> dict:
+        """Geocoding(Real). Google Geocoding API를 호출한다.
+
+        Args:
+            query (str): 주소 문자열.
+
+        Returns:
+            dict: {found, address_std, coord_std, place_id_g,
+                address_components_g, location_type}.
+        """
         data = self._geocode({"address": query})
         results = data.get("results", [])
         if not results:
@@ -386,6 +500,14 @@ class RealMapsAdapter(MapsAdapter):
         }
 
     def RG(self, coord) -> dict:
+        """Reverse Geocoding(Real). 좌표로 주소를 역조회한다.
+
+        Args:
+            coord (tuple): 좌표 (lat, lon).
+
+        Returns:
+            dict: {address_rg, address_components_rg}.
+        """
         data = self._geocode({"latlng": f"{coord[0]},{coord[1]}"})
         results = data.get("results", [])
         if not results:
@@ -399,6 +521,16 @@ class RealMapsAdapter(MapsAdapter):
 
     # ---- Places API (New) TextSearch ----
     def _search_text(self, text_query, *, location_bias=None, language_code=None):
+        """Places API(New) searchText POST 호출(FieldMask 지정).
+
+        Args:
+            text_query (str): 검색 질의 문자열.
+            location_bias (dict, optional): circle 바이어스. 좌표 중심 검색 시.
+            language_code (str, optional): displayName 반환 언어(BCP-47).
+
+        Returns:
+            list: places 배열(없으면 빈 리스트).
+        """
         import requests
         headers = {
             "Content-Type": "application/json",
@@ -433,6 +565,14 @@ class RealMapsAdapter(MapsAdapter):
     _PROXIMITY_M = 100.0
 
     def _pack(self, pl):
+        """Places API place 객체를 내부 공통 dict로 변환한다.
+
+        Args:
+            pl (dict): Places API place 항목.
+
+        Returns:
+            dict: {place_id_t, coord_t, address_std, address_components_t}.
+        """
         loc = pl.get("location", {})
         return {
             "place_id_t": pl["id"],
@@ -443,12 +583,27 @@ class RealMapsAdapter(MapsAdapter):
         }
 
     def _poi_candidates(self, places):
-        """행정구역 타입을 제외한 실재 POI 후보만."""
+        """행정구역 타입을 제외한 실재 POI 후보만.
+
+        Args:
+            places (list): Places API place 목록.
+
+        Returns:
+            list: place_id가 있고 행정구역 타입이 아닌 POI만.
+        """
         return [pl for pl in places
                 if pl.get("id") and not (set(pl.get("types") or []) & self._NON_POI_TYPES)]
 
     def _first_match(self, places, company):
-        """place_id 존재 AND POI 타입 AND SIM(업체명, displayName) 판정으로 found 결정."""
+        """place_id 존재 AND POI 타입 AND SIM(업체명, displayName) 판정으로 found 결정.
+
+        Args:
+            places (list): Places API place 목록.
+            company (str): 검색 업체명.
+
+        Returns:
+            dict | None: 첫 매칭 POI의 _pack 결과. 없으면 None.
+        """
         std_company = standardize_company(company)
         for pl in self._poi_candidates(places):
             name = (pl.get("displayName") or {}).get("text", "")
@@ -459,7 +614,15 @@ class RealMapsAdapter(MapsAdapter):
 
     def _proximity_match(self, places, center_coord):
         """정밀 좌표(center_coord)에 _PROXIMITY_M 내 POI가 '유일'하면 그 POI를 반환.
-        이름 유사도가 아닌 위치로 실재를 확인한다(교차언어 보강). 없거나 복수면 None."""
+        이름 유사도가 아닌 위치로 실재를 확인한다(교차언어 보강). 없거나 복수면 None.
+
+        Args:
+            places (list): Places API place 목록.
+            center_coord (tuple): 정밀 지오코딩 좌표 (lat, lon).
+
+        Returns:
+            dict | None: 근접 유일 POI의 _pack 결과. 없거나 복수면 None.
+        """
         near = []
         for pl in self._poi_candidates(places):
             loc = pl.get("location", {})
@@ -471,6 +634,21 @@ class RealMapsAdapter(MapsAdapter):
         return self._pack(near[0]) if len(near) == 1 else None
 
     def TS(self, company: str, center_coord, *, precise=False, lang=None) -> dict:
+        """좌표 중심 업체명 TextSearch(Real).
+
+        좁은 반경 매칭 → (precise 시) 근접 유일 POI 보강 → 반경 완화 재시도 순으로
+        시도하고, 영어 실패 시 lang 현지어로 1회 재검색한다.
+
+        Args:
+            company (str): 검색 업체명.
+            center_coord (tuple): 검색 중심 좌표 (lat, lon).
+            precise (bool, optional): 정밀 좌표 근접 보강 허용 여부. 기본 False.
+            lang (str, optional): 현지어 재검색 언어코드(BCP-47).
+
+        Returns:
+            dict: {found, relaxed, proximity, place_id_t, coord_t,
+                address_std, address_components_t}.
+        """
         def _bias(radius):
             return {"circle": {"center": {"latitude": center_coord[0],
                                           "longitude": center_coord[1]},
@@ -506,6 +684,16 @@ class RealMapsAdapter(MapsAdapter):
                 "coord_t": None, "address_std": None, "address_components_t": []}
 
     def TSA(self, company: str, address_text: str, *, lang=None) -> dict:
+        """업체명+주소 TextSearch(Real). 주소 레벨 축약(L1→L3) + 현지어 재검색.
+
+        Args:
+            company (str): 검색 업체명.
+            address_text (str): 검색 주소 텍스트.
+            lang (str, optional): 영어 실패 시 현지어 재검색 언어코드(BCP-47).
+
+        Returns:
+            dict: {found, level, place_id_t, address_std, address_components_t}.
+        """
         def _attempt(language_code):
             for level in (1, 2, 3):
                 reduced = gc.reduce_address(address_text, level)

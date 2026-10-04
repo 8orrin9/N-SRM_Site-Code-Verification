@@ -38,6 +38,14 @@ def _relax_id_gate(verdict, a_norm, b_norm):
     허용해, 숫자 1개 삽입·삭제 오타(예: 56789↔5678, 편집거리 1)를 DIFFERENT로 떨군다.
     유사 검색은 dirty data 오타로 진짜 후보를 veto·누락시키지 않도록 자릿수 조건 없이
     편집거리만으로 SIMILAR를 인정한다(코어 수정 없이 래퍼에서 재분류).
+
+    Args:
+        verdict (str): 코어 게이트 판정(EQUAL/SIMILAR/DIFFERENT/SKIP).
+        a_norm (str | None): 정규화된 쿼리 식별자.
+        b_norm (str | None): 정규화된 기준 식별자.
+
+    Returns:
+        str: 완화된 판정. DIFFERENT가 편집거리 임계 이내면 SIMILAR, 아니면 원본.
     """
     if verdict == dd.DIFFERENT and a_norm and b_norm:
         if dd.Levenshtein.distance(a_norm, b_norm) <= dd.CODE_SIMILAR_MAX_EDITS:
@@ -46,14 +54,29 @@ def _relax_id_gate(verdict, a_norm, b_norm):
 
 
 def _gate_display(verdict):
-    """게이트 판정 → 표시용 서브점수. SKIP은 None(프론트에서 '—')."""
+    """게이트 판정 → 표시용 서브점수. SKIP은 None(프론트에서 '—').
+
+    Args:
+        verdict (str): 게이트 판정(EQUAL/SIMILAR/DIFFERENT/SKIP).
+
+    Returns:
+        int | None: 0~100 서브점수. SKIP이면 None.
+    """
     if verdict == dd.SKIP:
         return None
     return int(round(CLOSENESS[verdict] * 100))
 
 
 def _coord_display(coord_a, coord_b):
-    """좌표 표시용 연속 점수. 결측이면 None."""
+    """좌표 표시용 연속 점수. 결측이면 None.
+
+    Args:
+        coord_a (tuple | None): 쿼리 좌표 (lat, lon).
+        coord_b (tuple | None): 기준 좌표 (lat, lon).
+
+    Returns:
+        int | None: 거리 기반 0~100 점수(가까울수록 높음). 좌표 결측이면 None.
+    """
     if not coord_a or not coord_b:
         return None
     dist = gc.haversine(coord_a, coord_b)
@@ -68,6 +91,14 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
     """게이트 입력 dict 두 개(_to_rows 변환 결과)를 받아 종합 순위 점수 산출.
 
     q_gate/ref_gate: {code, duns, std_name, coord, components, ...}
+
+    Args:
+        q_gate (dict): 쿼리 행의 게이트 입력.
+        ref_gate (dict): 기준 행의 게이트 입력.
+
+    Returns:
+        dict: 표시용 서브점수(nameSim/corpSim/dunsSim/addrSim/coordSim),
+            종합 점수(avg, 0~100), 원본 게이트 판정(gates), 식별자 충돌 여부(vetoed).
     """
     verdicts = {
         "code": _relax_id_gate(dd.code_gate(q_gate, ref_gate),
@@ -151,6 +182,12 @@ def _prep(row: dict) -> dict:
 
     언어별 비교(동일 언어 우선, 교차 시 영문 폴백)를 위해 'STD 업체명(Eng)'·'업체명 언어'도
     담는다. 영문명이 비면 std_name으로 폴백한다.
+
+    Args:
+        row (dict): 한국어 컬럼 키를 가진 원본 행.
+
+    Returns:
+        dict: 게이트 입력 dict(std_name/name_eng/lang 보완 포함).
     """
     g = dd._to_rows([row])[0]
     if not g.get("std_name"):
@@ -164,6 +201,14 @@ def find_similar(query_row: dict, reference_rows: list, top_k: int = 8) -> list:
     """쿼리 1건(한국어 키 dict)에 대한 상위 top_k 후보(avg 내림차순).
 
     쿼리·기준 행을 dedup의 _to_rows로 게이트 입력 형식으로 변환해 정규화 일관성을 맞춘다.
+
+    Args:
+        query_row (dict): 한국어 컬럼 키를 가진 쿼리 행.
+        reference_rows (list): 비교 기준 행 목록.
+        top_k (int, optional): 반환할 상위 후보 수. 기본 8.
+
+    Returns:
+        list: {ref_index, ref_row, ...점수} dict를 avg 내림차순 top_k개.
     """
     q_gate = _prep(query_row)
     ref_gates = [_prep(r) for r in reference_rows]
