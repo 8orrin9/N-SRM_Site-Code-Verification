@@ -26,6 +26,20 @@ Geocoding/Places API가 **출력 주소체계를 강제하는 파라미터를 �
 - `languageCode`를 지정하지 않으면 Google은 **번역 데이터가 있는 레벨만 영문, 세부 동(洞)은
   한글**로 조립해 **혼재 주소**를 만든다(예: `South Korea, …Yeongtong-gu, 원천동 471`).
 
+> **메인 Geocoding은 KR이어도 language를 지정하지 않는다.** `RealMapsAdapter._geocode()`는
+> `{"address": query}`만 넘기므로(`maps_adapter.py`), `STD 주소`의 **기본값**은 위의 혼재
+> 표기 그대로다. "국가가 한국이면 Geocoding을 ko로 호출한다"는 분기는 **존재하지 않는다.**
+> `verify_pipeline`을 타고 흐르는 `lang`(= `ko`)은 `adapter.G()`가 아니라 **`TS()`/`TSA()`에만**
+> 전달되며, 그 용도도 "주소 표기 언어"가 아니라 **영어 업체명 매칭 실패 시 displayName을
+> 현지어로 1회 재검색**하는 것이다(`maps_adapter.py` TS/TSA의 `if result is None and lang`).
+> 따라서 혼재 표기는 **버그가 아니라 language 미지정의 당연한 결과**이며, 이를 한글 도로명으로
+> 바로잡는 것이 아래 행안부 후처리의 역할이다(후처리 실패 시 이 혼재 표기가 폴백으로 남는다).
+
+> **혼재 STD 주소는 행안부의 입력이 아니다.** 행안부에 넘기는 검색어는 혼재 `STD 주소`가 아니라
+> `place_id`로 **별도 `language=ko` 재조회**(`address_ko`)한 순수 한글 주소에서 추출한다(4-2장).
+> 즉 "STD 주소가 혼재라서 행안부가 실패한다"는 인과는 성립하지 않으며, 행안부 성패는 ko
+> 재조회·검색어 추출·동명이동 교차검증 경로(4장)에 달려 있다.
+
 | 실재검증 후 STD 주소(변환 없이) | 문제 |
 |---|---|
 | `South Korea, Incheon, Seo-gu, 가좌3동 548-1` | 지번 + 영/한 혼재 ❌ |
