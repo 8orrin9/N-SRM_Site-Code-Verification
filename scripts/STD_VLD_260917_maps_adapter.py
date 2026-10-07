@@ -594,12 +594,21 @@ class RealMapsAdapter(MapsAdapter):
         return [pl for pl in places
                 if pl.get("id") and not (set(pl.get("types") or []) & self._NON_POI_TYPES)]
 
-    def _first_match(self, places, company):
+    def _first_match(self, places, company, *, center_coord=None, max_radius_m=None):
         """place_id 존재 AND POI 타입 AND SIM(업체명, displayName) 판정으로 found 결정.
+
+        `locationBias`는 Google 입장에서 소프트 힌트일 뿐 하드 필터가 아니라서, 요청한
+        반경(circle) 밖의 "이름만 완전히 같은" 업체가 결과에 섞여 들어올 수 있다(실측:
+        일본 소도시 좌표로 20km 반경 검색해도 70km+ 밖 동명 업체가 반환된 사례). 그래서
+        `center_coord`/`max_radius_m`이 주어지면, 이름이 맞아도 실제 거리가 그 반경을
+        넘는 후보는 건너뛰고 다음 후보를 본다 — Google이 보장 안 해주는 반경 제한을
+        여기서 직접 재검증한다.
 
         Args:
             places (list): Places API place 목록.
             company (str): 검색 업체명.
+            center_coord (tuple, optional): 검색에 쓰인 중심좌표. 거리 재검증용.
+            max_radius_m (float, optional): 이번 시도의 실제 허용 반경(m).
 
         Returns:
             dict | None: 첫 매칭 POI의 _pack 결과. 없으면 None.
@@ -608,8 +617,13 @@ class RealMapsAdapter(MapsAdapter):
         for pl in self._poi_candidates(places):
             name = (pl.get("displayName") or {}).get("text", "")
             _, is_match = SIM(std_company, name)
-            if is_match:
-                return self._pack(pl)
+            if not is_match:
+                continue
+            packed = self._pack(pl)
+            if center_coord and max_radius_m and packed["coord_t"][0] is not None:
+                if gc.haversine(center_coord, packed["coord_t"]) > max_radius_m:
+                    continue  # 이름은 일치하나 반경 밖 — Google의 소프트 바이어스 오매칭 차단
+            return packed
         return None
 
     def _proximity_match(self, places, center_coord):
@@ -658,7 +672,7 @@ class RealMapsAdapter(MapsAdapter):
             # 1차: 좁은 반경
             places = self._search_text(company, location_bias=_bias(2000.0),
                                        language_code=language_code)
-            m = self._first_match(places, company)
+            m = self._first_match(places, company, center_coord=center_coord, max_radius_m=2000.0)
             if m:
                 return {"found": True, "relaxed": False, "proximity": False, **m}
             # 1-보강: 이름 매칭 실패 + 정밀 좌표면 근접 유일 POI 수용(교차언어)
@@ -669,7 +683,7 @@ class RealMapsAdapter(MapsAdapter):
             # 2차: 반경 완화 재시도
             places = self._search_text(company, location_bias=_bias(20000.0),
                                        language_code=language_code)
-            m = self._first_match(places, company)
+            m = self._first_match(places, company, center_coord=center_coord, max_radius_m=20000.0)
             if m:
                 return {"found": True, "relaxed": True, "proximity": False, **m}
             return None
