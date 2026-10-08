@@ -21,11 +21,26 @@ from STD_VLD_260917_std_company import SIM
 
 # 게이트 근접도(EQUAL 근접도). SKIP은 집계에서 제외하므로 여기 없음.
 CLOSENESS = {dd.EQUAL: 1.0, dd.SIMILAR: 0.6, dd.DIFFERENT: 0.0}
-# 게이트별 신뢰도 가중치(코드/Duns가 강신호).
+# 게이트별 신뢰도 가중치(코드/Duns가 강신호). UI의 "필터별 가중치".
 GATE_WEIGHTS = {"duns": 0.35, "code": 0.30, "coord": 0.20, "addr": 0.15}
-ALPHA = 0.6              # 게이트 근거 G vs 업체명 N 결합 비중
-VETO_FACTOR = 0.35       # 식별자(코드/Duns) 충돌 시 곱셈 패널티
+F_WEIGHT = 0.6           # Base: 게이트 근거 F 가중치
+N_WEIGHT = 0.4           # Base: 업체명 유사도 N 가중치
+# 고유성 우대(+): 강신호(식별자/주소·좌표) EQUAL 시 하한으로 지배시키는 점수.
+G_STRONG_EQUAL = 1.0     # 코드/Duns EQUAL
+G_STRONG_SIMILAR = 0.85  # 주소/좌표 EQUAL
+VETO_FACTOR = 0.35       # 고유성 우대(-): 식별자(코드/Duns) 충돌 시 곱셈 패널티
 WEAK_NAME_FACTOR = 0.6   # 업체명이 약한 유사(게이트 DIFFERENT, SIM<임계)일 때 기여 감쇄
+
+# UI에서 넘어오는 weights dict의 키 ↔ 위 모듈 상수 기본값 매핑.
+# gate_weights는 중첩 dict라 별도로 병합한다.
+_WEIGHT_DEFAULTS = {
+    "f_weight": F_WEIGHT,
+    "n_weight": N_WEIGHT,
+    "g_strong_equal": G_STRONG_EQUAL,
+    "g_strong_similar": G_STRONG_SIMILAR,
+    "veto_factor": VETO_FACTOR,
+    "weak_name_factor": WEAK_NAME_FACTOR,
+}
 
 COORD_NEAR_M = 100.0     # 좌표 표시용 감쇠: 이 거리 이내 100점
 COORD_FAR_M = 5000.0     # 이 거리 이상 0점
@@ -87,7 +102,7 @@ def _coord_display(coord_a, coord_b):
     return int(round(100 * (1 - (dist - COORD_NEAR_M) / (COORD_FAR_M - COORD_NEAR_M))))
 
 
-def score_pair(q_gate: dict, ref_gate: dict) -> dict:
+def score_pair(q_gate: dict, ref_gate: dict, weights: dict | None = None) -> dict:
     """게이트 입력 dict 두 개(_to_rows 변환 결과)를 받아 종합 순위 점수 산출.
 
     q_gate/ref_gate: {code, duns, std_name, coord, components, ...}
@@ -95,11 +110,27 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
     Args:
         q_gate (dict): 쿼리 행의 게이트 입력.
         ref_gate (dict): 기준 행의 게이트 입력.
+        weights (dict | None, optional): UI에서 조절 가능한 가중치 오버라이드.
+            `_WEIGHT_DEFAULTS`의 키(f_weight/n_weight/g_strong_equal/
+            g_strong_similar/veto_factor/weak_name_factor) + 중첩 dict
+            `gate_weights`(duns/code/addr/coord). 없는 키는 모듈 기본값 사용.
+            업체명 상이 판단 임계(name_diff_threshold)는 여기서 다루지 않음 —
+            `SIM()`이 참조하는 전역 상수라 호출자(find_similar/search)가
+            실행 구간 동안 임시로 오버라이드한다.
 
     Returns:
         dict: 표시용 서브점수(nameSim/corpSim/dunsSim/addrSim/coordSim),
             종합 점수(avg, 0~100), 원본 게이트 판정(gates), 식별자 충돌 여부(vetoed).
     """
+    w = weights or {}
+    gate_weights = {**GATE_WEIGHTS, **(w.get("gate_weights") or {})}
+    f_weight = w.get("f_weight", _WEIGHT_DEFAULTS["f_weight"])
+    n_weight = w.get("n_weight", _WEIGHT_DEFAULTS["n_weight"])
+    g_strong_equal = w.get("g_strong_equal", _WEIGHT_DEFAULTS["g_strong_equal"])
+    g_strong_similar = w.get("g_strong_similar", _WEIGHT_DEFAULTS["g_strong_similar"])
+    veto_factor = w.get("veto_factor", _WEIGHT_DEFAULTS["veto_factor"])
+    weak_name_factor = w.get("weak_name_factor", _WEIGHT_DEFAULTS["weak_name_factor"])
+
     verdicts = {
         "code": _relax_id_gate(dd.code_gate(q_gate, ref_gate),
                                dd.normalize_code(q_gate.get("code")),
@@ -125,9 +156,9 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
     for g, v in verdicts.items():
         if v == dd.SKIP:
             continue
-        w = GATE_WEIGHTS[g]
-        num += w * CLOSENESS[v]
-        den += w
+        gw = gate_weights[g]
+        num += gw * CLOSENESS[v]
+        den += gw
     G = (num / den) if den else None
 
     # B. 업체명 항 N — 약한 유사(게이트 DIFFERENT, SIM<임계)면 결합 기여를 감쇄한다.
@@ -135,13 +166,13 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
     #    잠식하지 않도록. 표시용 nameSim은 원점수 유지, 결합용 N만 감쇄.
     N = name_sim
     if N is not None and name_verdict == dd.DIFFERENT:
-        N = N * WEAK_NAME_FACTOR
+        N = N * weak_name_factor
 
     # C. 강신호 dominance
     if verdicts["code"] == dd.EQUAL or verdicts["duns"] == dd.EQUAL:
-        g_strong = 1.0
+        g_strong = g_strong_equal
     elif verdicts["addr"] == dd.EQUAL or verdicts["coord"] == dd.EQUAL:
-        g_strong = 0.85
+        g_strong = g_strong_similar
     else:
         g_strong = 0.0
 
@@ -153,12 +184,13 @@ def score_pair(q_gate: dict, ref_gate: dict) -> dict:
     elif N is None:
         base = G
     else:
-        base = max(ALPHA * G + (1 - ALPHA) * N, g_strong, N)
+        base = max(f_weight * G + n_weight * N, g_strong, N)
 
-    # E. veto(식별자 충돌) + 0~100 스케일
+    # E. veto(식별자 충돌) + 0~100 스케일. 가중치를 자유롭게 조절할 수 있으므로
+    #    base가 1을 넘는 조합도 가능해 점수를 0~100으로 clamp한다.
     vetoed = verdicts["code"] == dd.DIFFERENT or verdicts["duns"] == dd.DIFFERENT
-    v_factor = VETO_FACTOR if vetoed else 1.0
-    score = int(round(100 * v_factor * base))
+    v_factor = veto_factor if vetoed else 1.0
+    score = max(0, min(100, int(round(100 * v_factor * base))))
 
     return {
         "nameSim": int(round(name_sim * 100)) if name_sim is not None else None,
@@ -197,7 +229,8 @@ def _prep(row: dict) -> dict:
     return g
 
 
-def find_similar(query_row: dict, reference_rows: list, top_k: int = 8) -> list:
+def find_similar(query_row: dict, reference_rows: list, top_k: int = 8,
+                  weights: dict | None = None) -> list:
     """쿼리 1건(한국어 키 dict)에 대한 상위 top_k 후보(avg 내림차순).
 
     쿼리·기준 행을 dedup의 _to_rows로 게이트 입력 형식으로 변환해 정규화 일관성을 맞춘다.
@@ -206,6 +239,8 @@ def find_similar(query_row: dict, reference_rows: list, top_k: int = 8) -> list:
         query_row (dict): 한국어 컬럼 키를 가진 쿼리 행.
         reference_rows (list): 비교 기준 행 목록.
         top_k (int, optional): 반환할 상위 후보 수. 기본 8.
+        weights (dict | None, optional): `score_pair`에 그대로 전달할 가중치
+            오버라이드. 기본 None(모듈 기본값 사용).
 
     Returns:
         list: {ref_index, ref_row, ...점수} dict를 avg 내림차순 top_k개.
@@ -214,7 +249,7 @@ def find_similar(query_row: dict, reference_rows: list, top_k: int = 8) -> list:
     ref_gates = [_prep(r) for r in reference_rows]
     scored = []
     for ri, (ref, ref_gate) in enumerate(zip(reference_rows, ref_gates)):
-        s = score_pair(q_gate, ref_gate)
+        s = score_pair(q_gate, ref_gate, weights)
         scored.append({"ref_index": ri, "ref_row": ref, **s})
     scored.sort(key=lambda m: m["avg"], reverse=True)
     return scored[:top_k]

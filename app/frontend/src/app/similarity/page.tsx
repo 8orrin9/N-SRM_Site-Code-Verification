@@ -7,11 +7,12 @@ import TableList from "@/components/TableList";
 import ResultDock from "@/components/ResultDock";
 import Drawer from "@/components/Drawer";
 import ColumnMapModal from "@/components/ColumnMapModal";
+import InfoTip from "@/components/InfoTip";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { avgClass, scoreBadge, rowLabel } from "@/lib/ui";
 import { INPUT_COLUMNS, STD_COLUMNS, MAP_TARGETS, applyMapping } from "@/lib/columns";
-import type { QueryResult, SimMatch, SiteRow, TableMeta } from "@/lib/types";
+import type { QueryResult, SimilarityWeights, SimMatch, SiteRow, TableMeta } from "@/lib/types";
 
 const blankRow = (): SiteRow => Object.fromEntries(INPUT_COLUMNS.map((c) => [c, ""]));
 const REF_COLS = ["업체", "STD 업체명", "기업식별 코드", "Duns No.", "국가/지역", "주소(Eng)", "STD 주소"];
@@ -36,6 +37,31 @@ export default function SimilarityPage() {
   const [loading, setLoading] = useState(false);
   const [flash, setFlash] = useState(false);
   const [matchTh, setMatchTh] = useState(60);
+
+  // 유사도 가중치 설정 (모두 %로 보관 → 계산 시 /100). 기본값은 백엔드 기본값과 동일.
+  const [weightOpen, setWeightOpen] = useState(false);
+  const [wCode, setWCode] = useState(30);
+  const [wDuns, setWDuns] = useState(35);
+  const [wAddr, setWAddr] = useState(15);
+  const [wCoord, setWCoord] = useState(20);
+  const [gStrongEqual, setGStrongEqual] = useState(100);
+  const [gStrongSimilar, setGStrongSimilar] = useState(85);
+  const [vetoFactor, setVetoFactor] = useState(35);
+  const [nameDiffTh, setNameDiffTh] = useState(85);
+  const [weakNameFactor, setWeakNameFactor] = useState(60);
+  const [fWeight, setFWeight] = useState(60);
+  const [nWeight, setNWeight] = useState(40);
+
+  const buildWeights = (): SimilarityWeights => ({
+    gate_weights: { code: wCode / 100, duns: wDuns / 100, addr: wAddr / 100, coord: wCoord / 100 },
+    g_strong_equal: gStrongEqual / 100,
+    g_strong_similar: gStrongSimilar / 100,
+    veto_factor: vetoFactor / 100,
+    name_diff_threshold: nameDiffTh / 100,
+    weak_name_factor: weakNameFactor / 100,
+    f_weight: fWeight / 100,
+    n_weight: nWeight / 100,
+  });
 
   const refresh = useCallback(async () => {
     try { setTables((await api.listTables("deduped")).tables); } catch { /* noop */ }
@@ -145,7 +171,7 @@ export default function SimilarityPage() {
     setLoading(true);
     try {
       // 전체 후보를 받아 상세 랭킹에서 '더보기'로 점진 노출한다.
-      const res = await api.similarity(stdRows, refRows, refRows.length);
+      const res = await api.similarity(stdRows, refRows, refRows.length, buildWeights());
       setResults(res.results);
       setDockOpen(true);
       toast(`유사 검색 완료 — 쿼리 ${res.results.length}건`);
@@ -164,6 +190,85 @@ export default function SimilarityPage() {
           <input type="range" min={0} max={100} value={matchTh} onChange={(e) => setMatchTh(+e.target.value)} />
           <span className="th-val">{matchTh}</span></div>
       </div>
+
+      <div className="weight-panel">
+        <button className="btn ghost sm weight-panel-toggle" onClick={() => setWeightOpen((v) => !v)}>
+          ⚙ 유사도 가중치 설정 {weightOpen ? "▾" : "▸"}
+        </button>
+        {weightOpen && (
+          <div className="weight-body">
+            <div className="weight-formula">
+              <div className="wf-main">Score = 100 × U<sub>N</sub> × Base</div>
+              <div className="wf-main">Base = max(F가중치 × F + N가중치 × N, U<sub>P</sub>, N)</div>
+              <div className="wf-sub">F = 기업식별코드 · Duns No. · 주소 · 좌표 필터별 가중치 곱 합산 값</div>
+              <div className="wf-sub">N = 업체명 유사도 점수 &nbsp;·&nbsp; U<sub>P</sub> = 고유성 우대(+) 점수 &nbsp;·&nbsp; U<sub>N</sub> = 고유성 우대(-) 점수</div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">필터별 가중치</div>
+              <div className="thresh"><label>기업식별코드</label>
+                <input type="range" min={0} max={100} value={wCode} onChange={(e) => setWCode(+e.target.value)} />
+                <span className="th-val">{(wCode / 100).toFixed(2)}</span></div>
+              <div className="thresh"><label>Duns No.</label>
+                <input type="range" min={0} max={100} value={wDuns} onChange={(e) => setWDuns(+e.target.value)} />
+                <span className="th-val">{(wDuns / 100).toFixed(2)}</span></div>
+              <div className="thresh"><label>주소</label>
+                <input type="range" min={0} max={100} value={wAddr} onChange={(e) => setWAddr(+e.target.value)} />
+                <span className="th-val">{(wAddr / 100).toFixed(2)}</span></div>
+              <div className="thresh"><label>좌표</label>
+                <input type="range" min={0} max={100} value={wCoord} onChange={(e) => setWCoord(+e.target.value)} />
+                <span className="th-val">{(wCoord / 100).toFixed(2)}</span></div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">고유성 우대(+)
+                <InfoTip text="기업식별코드와 Duns No.가 동일하거나 유사할 경우 양의 가중치를 부여하는 정도를 의미합니다." /></div>
+              <div className="thresh"><label>EQUAL</label>
+                <input type="range" min={0} max={100} value={gStrongEqual} onChange={(e) => setGStrongEqual(+e.target.value)} />
+                <span className="th-val">{(gStrongEqual / 100).toFixed(2)}</span></div>
+              <div className="thresh"><label>SIMILAR</label>
+                <input type="range" min={0} max={100} value={gStrongSimilar} onChange={(e) => setGStrongSimilar(+e.target.value)} />
+                <span className="th-val">{(gStrongSimilar / 100).toFixed(2)}</span></div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">고유성 우대(-)
+                <InfoTip text="기업식별코드나 Duns No.가 다를 경우 음의 가중치를 부여하는 정도를 의미합니다." /></div>
+              <div className="thresh"><label>충돌 패널티</label>
+                <input type="range" min={0} max={100} value={vetoFactor} onChange={(e) => setVetoFactor(+e.target.value)} />
+                <span className="th-val">{(vetoFactor / 100).toFixed(2)}</span></div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">업체명 상이 판단 임계
+                <InfoTip text="업체명 비교 알고리즘(SIM)의 결과가 해당 값보다 낮을 경우 Different 판정됩니다." /></div>
+              <div className="thresh"><label>임계값</label>
+                <input type="range" min={50} max={100} value={nameDiffTh} onChange={(e) => setNameDiffTh(+e.target.value)} />
+                <span className="th-val">{(nameDiffTh / 100).toFixed(2)}</span></div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">업체명 상이함에 따른 감쇄도
+                <InfoTip text="업체명이 Different 판정된 경우 유사 점수 계산 시 음의 가중치를 부여하는 정도를 의미합니다." /></div>
+              <div className="thresh"><label>감쇄도</label>
+                <input type="range" min={0} max={100} value={weakNameFactor} onChange={(e) => setWeakNameFactor(+e.target.value)} />
+                <span className="th-val">{(weakNameFactor / 100).toFixed(2)}</span></div>
+            </div>
+
+            <div className="weight-group">
+              <div className="weight-group-title">Base
+                <InfoTip text="Base 값 계산 시 활용되는 F와 N의 가중합의 가중치를 설정합니다." /></div>
+              <div className="thresh"><label>F 가중치</label>
+                <input type="range" min={0} max={100} value={fWeight} onChange={(e) => setFWeight(+e.target.value)} />
+                <span className="th-val">{(fWeight / 100).toFixed(2)}</span></div>
+              <div className="thresh"><label>N 가중치</label>
+                <input type="range" min={0} max={100} value={nWeight} onChange={(e) => setNWeight(+e.target.value)} />
+                <span className="th-val">{(nWeight / 100).toFixed(2)}</span></div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <p className="pane-note">중복 제거하여 저장한 테이블 (복수 선택 후 Load, 이어붙이기)</p>
       <TableList tables={tables} selected={picked}
         onToggle={(n) => setPicked((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; })}

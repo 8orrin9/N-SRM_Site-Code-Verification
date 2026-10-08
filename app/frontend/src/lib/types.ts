@@ -62,3 +62,16 @@ export interface DedupThresholds {
   coord_m?: number;
   code_max_edits?: number;
 }
+
+// Similarity Search 종합 점수 산출용 가중치. find_similar.score_pair의
+// weights 파라미터와 키를 맞춘다. 전부 선택값 — 없으면 백엔드 기본값 사용.
+export interface SimilarityWeights {
+  gate_weights?: { duns?: number; code?: number; addr?: number; coord?: number }; // 필터별 가중치
+  g_strong_equal?: number;      // 고유성 우대(+) · Equal
+  g_strong_similar?: number;    // 고유성 우대(+) · Similar
+  veto_factor?: number;         // 고유성 우대(-)
+  name_diff_threshold?: number; // 업체명 상이 판단 임계
+  weak_name_factor?: number;    // 업체명 상이함에 따른 감쇄도
+  f_weight?: number;            // Base: F 가중치
+  n_weight?: number;            // Base: N 가중치
+}

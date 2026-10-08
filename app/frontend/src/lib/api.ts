@@ -1,6 +1,6 @@
 // NEXT_PUBLIC_API_BASE 기반 fetch 래퍼.
 import type {
-  DedupResult, DedupThresholds, QueryResult, SavedTable, SiteRow, TableMeta,
+  DedupResult, DedupThresholds, QueryResult, SavedTable, SimilarityWeights, SiteRow, TableMeta,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -76,12 +76,13 @@ export const api = {
     jsonFetch<DedupResult>(`/api/dedup`, {
       method: "POST", body: JSON.stringify({ rows: trimForCompute(rows), thresholds }),
     }),
-  similarity: (query_rows: SiteRow[], reference_rows: SiteRow[], top_k = 8) =>
+  similarity: (query_rows: SiteRow[], reference_rows: SiteRow[], top_k = 8, weights?: SimilarityWeights) =>
     jsonFetch<{ results: QueryResult[] }>(`/api/similarity`, {
       method: "POST", body: JSON.stringify({
         query_rows: trimForCompute(query_rows),
         reference_rows: trimForCompute(reference_rows),
         top_k,
+        weights,
       }),
     }),
 };
