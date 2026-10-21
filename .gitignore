@@ -65,3 +65,7 @@ backup/
 
 # npm lockfile (내부 환경 호환성)
 shared/frontend/package-lock.json
+
+# 일본/대만 행정구역 매핑 — Google Geocoding 원문 응답 캐시(재실행 비용 절감용,
+# 최종 결과물인 mapping_result.csv/mismatch_report.csv/summary.md만 커밋)
+data/MASTER_261021_google_raw_cache/
